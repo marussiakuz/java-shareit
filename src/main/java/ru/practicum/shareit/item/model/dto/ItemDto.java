@@ -1,6 +1,9 @@
-package ru.practicum.shareit.item.model;
+package ru.practicum.shareit.item.model.dto;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -9,7 +12,7 @@ import javax.validation.constraints.NotNull;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Item {
+public class ItemDto {
     private Long id;
     private Long ownerId;
     @NotNull(message = "Name may not be null")
