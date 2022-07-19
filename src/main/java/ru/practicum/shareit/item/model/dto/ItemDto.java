@@ -23,4 +23,5 @@ public class ItemDto {
     private String description;
     @NotNull(message = "Available may not be null")
     private Boolean available;
+    private Long itemRequestId;
 }
