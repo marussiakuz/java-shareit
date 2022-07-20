@@ -1,6 +1,8 @@
 package ru.practicum.shareit.item.model;
 
 import lombok.*;
+import ru.practicum.shareit.request.model.ItemRequest;
+import ru.practicum.shareit.user.model.User;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -11,7 +13,7 @@ import javax.validation.constraints.NotNull;
 @Builder
 public class Item {
     private Long id;
-    private Long ownerId;
+    private User owner;
     @NotNull(message = "Name may not be null")
     @NotBlank(message = "Name may not be blank")
     private String name;
@@ -20,5 +22,5 @@ public class Item {
     private String description;
     @NotNull(message = "Available may not be null")
     private Boolean available;
-    private Long itemRequestId;
+    private ItemRequest itemRequest;
 }

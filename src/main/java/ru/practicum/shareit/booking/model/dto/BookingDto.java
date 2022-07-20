@@ -4,9 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import ru.practicum.shareit.booking.model.Status;
 
-import java.time.Period;
+import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
@@ -14,8 +13,9 @@ import java.time.Period;
 @Builder
 public class BookingDto {
     private Long id;
-    private Long bookerId;
+    private LocalDate start;
+    private LocalDate end;
     private Long itemId;
-    private Period period;
-    private Status status;
+    private Long bookerId;
+    private String status;
 }

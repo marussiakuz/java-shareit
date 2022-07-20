@@ -4,8 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import ru.practicum.shareit.item.model.Item;
+import ru.practicum.shareit.user.model.User;
 
-import java.time.Period;
+import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
@@ -13,8 +15,9 @@ import java.time.Period;
 @Builder
 public class Booking {
     private Long id;
-    private Long bookerId;
-    private Long itemId;
-    private Period period;
+    private LocalDate start;
+    private LocalDate end;
+    private Item item;
+    private User booker;
     private Status status;
 }
