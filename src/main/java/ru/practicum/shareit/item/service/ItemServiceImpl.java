@@ -89,11 +89,11 @@ public class ItemServiceImpl implements ItemService {
             throw new NoAccessRightsException(String.format("User with id=%s has no rights to update item with id=%s",
                     userId, itemId));
 
-        if(itemDto.getName() != null) beingUpdated.setName(itemDto.getName());
+        if (itemDto.getName() != null) beingUpdated.setName(itemDto.getName());
 
-        if(itemDto.getDescription() != null) beingUpdated.setDescription(itemDto.getDescription());
-        
-        if(itemDto.getAvailable() != null) beingUpdated.setAvailable(itemDto.getAvailable());
+        if (itemDto.getDescription() != null) beingUpdated.setDescription(itemDto.getDescription());
+
+        if (itemDto.getAvailable() != null) beingUpdated.setAvailable(itemDto.getAvailable());
 
         itemRepository.save(beingUpdated);
         log.info("Item with id={} has successfully updated by user with id={}", itemId, userId);
