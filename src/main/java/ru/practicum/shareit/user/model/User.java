@@ -21,7 +21,7 @@ public class User {
     @Column(name = "user_id")
     private Long id;
 
-    @Column(name = "user_name", length=128, nullable=false)
+    @Column(name = "user_name", length = 128, nullable = false)
     private String name;
 
     @NotNull(message = "Email may not be null")

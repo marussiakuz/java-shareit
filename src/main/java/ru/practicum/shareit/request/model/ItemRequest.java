@@ -26,7 +26,7 @@ public class ItemRequest {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(name = "item_request_description", length=128, nullable = false)
+    @Column(name = "item_request_description", length = 128, nullable = false)
     private String description;
 
     @Column(name = "creation_time")
