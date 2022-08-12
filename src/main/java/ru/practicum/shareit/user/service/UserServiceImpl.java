@@ -4,16 +4,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.errorHandler.exceptions.DuplicateUserException;
+import ru.practicum.shareit.errorHandler.exceptions.UserNotFoundException;
+import ru.practicum.shareit.user.model.User;
+import ru.practicum.shareit.user.model.UserMapper;
 import ru.practicum.shareit.user.model.dto.UserDto;
 import ru.practicum.shareit.user.repo.UserRepository;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
-    private long id;
 
     @Autowired
     public UserServiceImpl(UserRepository userRepository) {
@@ -21,50 +24,51 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserDto save(UserDto user) {
-        checkForDuplication(user.getEmail());
-
-        user.setId(++id);
-        userRepository.save(user);
+    public UserDto save(UserDto userDto) {
+        User user = userRepository.save(UserMapper.toUser(userDto));
         log.info("User with id={} added successfully", user.getId());
 
-        return user;
+        return UserMapper.toUserDto(user);
     }
 
     @Override
-    public UserDto update(long id, UserDto user) {
-        UserDto beingUpdated = userRepository.findById(id);
+    public UserDto update(long id, UserDto userDto) {
+        User beingUpdated = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(String.format("User with id=%s not found", id)));
 
-        if (user.getEmail() != null) {
-            checkForDuplication(user.getEmail());
-            beingUpdated.setEmail(user.getEmail());
+        if (userDto.getEmail() != null) {
+            checkForDuplication(userDto.getEmail());
+            beingUpdated.setEmail(userDto.getEmail());
         }
-        if (user.getName() != null) beingUpdated.setName(user.getName());
+        if (userDto.getName() != null) beingUpdated.setName(userDto.getName());
 
-        userRepository.update(beingUpdated);
-        log.info("User with id={} updated successfully", user.getId());
+        userRepository.save(beingUpdated);
+        log.info("User with id={} updated successfully", id);
 
-        return beingUpdated;
+        return UserMapper.toUserDto(beingUpdated);
     }
 
     @Override
     public UserDto findById(long id) {
-        return userRepository.findById(id);
+        return UserMapper.toUserDto(userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(String.format("User with id=%s not found", id))));
     }
 
     @Override
     public List<UserDto> findAll() {
-        return userRepository.findAll();
+        return userRepository.findAll().stream()
+                .map(UserMapper::toUserDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     public void delete(long id) {
-        userRepository.delete(id);
+        userRepository.deleteById(id);
         log.info("User with id={} deleted successfully", id);
     }
 
     private void checkForDuplication(String email) {
-        if (userRepository.doesEmailExist(email))
+        if (userRepository.existsUserByEmail(email))
             throw new DuplicateUserException(String.format("User with email=%s already exists", email));
     }
 }

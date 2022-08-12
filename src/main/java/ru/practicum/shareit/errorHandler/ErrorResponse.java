@@ -1,12 +1,16 @@
 package ru.practicum.shareit.errorHandler;
 
-import lombok.Getter;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-@Getter
 public class ErrorResponse {
     private final String message;
 
     public ErrorResponse(String message) {
         this.message = message;
+    }
+
+    @JsonProperty("Error message")
+    public String getMessage() {
+        return message;
     }
 }
