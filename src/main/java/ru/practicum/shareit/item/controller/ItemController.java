@@ -2,7 +2,10 @@ package ru.practicum.shareit.item.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.shareit.item.model.dto.CommentDto;
 import ru.practicum.shareit.item.model.dto.ItemDto;
+import ru.practicum.shareit.item.model.dto.ItemDtoFull;
+import ru.practicum.shareit.item.model.dto.ItemDtoWithBookings;
 import ru.practicum.shareit.item.service.ItemService;
 
 import javax.validation.Valid;
@@ -19,24 +22,29 @@ public class ItemController {
     }
 
     @PostMapping
-    public ItemDto create(@RequestHeader(value = "X-Sharer-User-Id") long userId,
-                       @Valid @RequestBody ItemDto item) {
+    public ItemDto create(@RequestHeader(value = "X-Sharer-User-Id") long userId, @Valid @RequestBody ItemDto item) {
         return itemService.addNewItem(userId, item);
     }
 
+    @PostMapping("/{itemId}/comment")
+    public CommentDto postComment(@RequestHeader("X-Sharer-User-Id") long userId, @RequestBody CommentDto commentDto,
+                                  @PathVariable long itemId) {
+        return itemService.postComment(commentDto, userId, itemId);
+    }
+
     @PatchMapping("/{itemId}")
-    public ItemDto update(@RequestHeader("X-Sharer-User-Id") long userId,
-                       @RequestBody ItemDto item, @PathVariable long itemId) {
+    public ItemDto update(@RequestHeader("X-Sharer-User-Id") long userId, @RequestBody ItemDto item,
+                          @PathVariable long itemId) {
         return itemService.updateItem(userId, itemId, item);
     }
 
     @GetMapping("/{itemId}")
-    public ItemDto getByItemId(@PathVariable long itemId) {
-        return itemService.findItemById(itemId);
+    public ItemDtoFull getByItemId(@RequestHeader("X-Sharer-User-Id") long userId, @PathVariable long itemId) {
+        return itemService.findItemById(userId, itemId);
     }
 
     @GetMapping
-    public List<ItemDto> getByUserId(@RequestHeader("X-Sharer-User-Id") long userId) {
+    public List<ItemDtoWithBookings> getByUserId(@RequestHeader("X-Sharer-User-Id") long userId) {
         return itemService.getItemsByOwnerId(userId);
     }
 
