@@ -125,7 +125,9 @@ public class ItemServiceImpl implements ItemService {
     public List<ItemDto> search(String text) {  // поиск вещей по содержанию введенного текста в имени или описании
         if (text.isEmpty() || text.isBlank()) return new ArrayList<>();
 
-        return itemRepository.findItemsByNameContainsIgnoreCaseOrDescriptionContainsIgnoreCaseAndAvailableTrue(text, text).stream()
+        System.out.println(itemRepository.findAll());
+
+        return itemRepository.search(text).stream()
                 .map(ItemMapper::toItemDto)
                 .collect(Collectors.toList());
     }
