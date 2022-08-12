@@ -13,7 +13,7 @@ import javax.validation.constraints.NotNull;
 @AllArgsConstructor
 @Builder
 @Entity
-@Table(name="users")
+@Table(name = "users")
 public class User {
 
     @Id
@@ -27,7 +27,7 @@ public class User {
     @NotNull(message = "Email may not be null")
     @NotBlank(message = "Email may not be blank")
     @Email(message = "The email is incorrect")
-    @Column(length=128, unique=true)
+    @Column(length = 128, unique = true)
     private String email;
 
     @JsonProperty("id")

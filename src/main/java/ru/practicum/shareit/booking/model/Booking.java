@@ -23,11 +23,11 @@ public class Booking {
     @Column(name = "booking_id")
     private Long id;
 
-    @Column(name="start_date")
+    @Column(name = "start_date")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy.MM.dd, hh:mm:ss")
     private LocalDateTime start;
 
-    @Column(name="end_date")
+    @Column(name = "end_date")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy.MM.dd, hh:mm:ss")
     private LocalDateTime end;
 

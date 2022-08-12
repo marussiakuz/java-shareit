@@ -8,10 +8,16 @@ import ru.practicum.shareit.item.model.dto.ItemDtoWithBookings;
 import java.util.List;
 
 public interface ItemService {
+
     ItemDto addNewItem(long userId, ItemDto item);
+
     CommentDto postComment(CommentDto commentDto, long userId, long itemId);
+
     ItemDto updateItem(long userId, long itemId, ItemDto item);
+
     ItemDtoFull findItemById(long userId, long itemId);
+
     List<ItemDtoWithBookings> getItemsByOwnerId(long userId);
+
     List<ItemDto> search(String text);
 }

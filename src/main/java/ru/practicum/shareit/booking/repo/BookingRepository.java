@@ -11,11 +11,16 @@ import java.util.Optional;
 
 @EnableJpaRepositories
 public interface BookingRepository extends JpaRepository<Booking, Long> {
+
     List<Booking> getBookingsByBookerIdOrderByStartDesc(long bookerId);
+
     @Query(value = "select b from Booking b left join Item i on b.item.id = i.id where i.owner.id = ?1 " +
             "order by b.start desc")
     List<Booking> getBookingsByOwnerId(long ownerId);
+
     Optional<Booking> getTopByItem_IdAndBooker_IdOrderByEndAsc(long itemId, long bookerId);
+
     Optional<Booking> getTopByItem_IdAndEndBeforeOrderByStartDesc(long itemId, LocalDateTime localDateTime);
+
     Optional<Booking> getTopByItem_IdAndStartAfterOrderByStartDesc(long itemId, LocalDateTime localDateTime);
 }
