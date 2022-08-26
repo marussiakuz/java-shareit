@@ -3,7 +3,6 @@ package ru.practicum.shareit.item.model.mapper;
 import ru.practicum.shareit.booking.model.dto.BookingShortDto;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.model.dto.*;
-import ru.practicum.shareit.request.model.Request;
 import ru.practicum.shareit.user.model.User;
 
 import java.util.List;

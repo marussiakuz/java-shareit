@@ -211,7 +211,7 @@ class RequestServiceTest {
     }
 
     @Test
-    void WhenTryToGetByIdByNotExistsUserThenUserNotFoundException() {
+    void whenTryToGetByIdByNotExistsUserThenUserNotFoundException() {
         Mockito.when(userRepository.existsById(1L))
                 .thenReturn(false);
 
@@ -230,7 +230,7 @@ class RequestServiceTest {
     }
 
     @Test
-    void WhenTryToGetNotExistsRequestThenRequestNotFoundException() {
+    void whenTryToGetNotExistsRequestThenRequestNotFoundException() {
         Mockito.when(userRepository.existsById(1L))
                 .thenReturn(true);
         Mockito.when(requestRepository.findById(5L))

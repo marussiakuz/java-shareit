@@ -311,7 +311,7 @@ class ItemServiceTest {
     }
 
     @Test
-    void WhenUpdateItemByNotExistsUserThenUserNotFoundException() {
+    void whenUpdateItemByNotExistsUserThenUserNotFoundException() {
         Mockito.when(userRepository.existsById(1L))
                 .thenReturn(false);
 
@@ -330,7 +330,7 @@ class ItemServiceTest {
     }
 
     @Test
-    void WhenUpdateItemNotExistsThenItemNotFoundException() {
+    void whenUpdateItemNotExistsThenItemNotFoundException() {
         Mockito.when(userRepository.existsById(1L))
                 .thenReturn(true);
         Mockito.when(itemRepository.findById(1L))
@@ -351,7 +351,7 @@ class ItemServiceTest {
     }
 
     @Test
-    void WhenUpdateItemByUserNotOwnerThenNoAccessRightsException() {
+    void whenUpdateItemByUserNotOwnerThenNoAccessRightsException() {
         User anotherOwner = User.builder().id(5L).build();
         Item itemWithAnotherOwner = Item.builder().id(1L).owner(anotherOwner).build();
 
@@ -375,7 +375,7 @@ class ItemServiceTest {
     }
 
     @Test
-    void WhenUpdateValidItemThenCallSaveItemRepository() {
+    void whenUpdateValidItemThenCallSaveItemRepository() {
         Mockito.when(userRepository.existsById(1L))
                 .thenReturn(true);
         Mockito.when(itemRepository.findById(1L))
@@ -396,7 +396,7 @@ class ItemServiceTest {
     }
 
     @Test
-    void WhenTryFindNotExistsItemByIdThenItemNotFoundException() {
+    void whenTryFindNotExistsItemByIdThenItemNotFoundException() {
         Mockito.when(itemRepository.findById(1L))
                 .thenThrow(new ItemNotFoundException("Item with id=1 not found"));
 
@@ -417,7 +417,7 @@ class ItemServiceTest {
     }
 
     @Test
-    void WhenFindItemByIdUserIsOwnerThenReturnItemWithBookingsDate() {
+    void whenFindItemByIdUserIsOwnerThenReturnItemWithBookingsDate() {
         List<Comment> comments = List.of(CommentMapper.toComment(comment, item, user));
         Booking last = Booking.builder().item(item).booker(user).start(LocalDateTime.now().minusDays(1)).build();
         Booking next = Booking.builder().item(item).booker(user).start(LocalDateTime.now().plusDays(1)).build();
@@ -457,7 +457,7 @@ class ItemServiceTest {
     }
 
     @Test
-    void WhenFindItemByIdUserIsNotOwnerThenReturnItemBookingsDateNull() {
+    void whenFindItemByIdUserIsNotOwnerThenReturnItemBookingsDateNull() {
         List<Comment> comments = List.of(CommentMapper.toComment(comment, item, user));
 
         User owner = User.builder().id(5L).build();
@@ -488,7 +488,7 @@ class ItemServiceTest {
     }
 
     @Test
-    void WhenGetItemsByOwnerIdThenReturnItemWithBookingsDate() {
+    void whenGetItemsByOwnerIdThenReturnItemWithBookingsDate() {
         Slice<Item> items = new SliceImpl<>(List.of(item));
         Booking last = Booking.builder().item(item).booker(user).start(LocalDateTime.now().minusDays(1)).build();
         Booking next = Booking.builder().item(item).booker(user).start(LocalDateTime.now().plusDays(1)).build();

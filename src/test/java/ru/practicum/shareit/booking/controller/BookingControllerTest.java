@@ -429,7 +429,7 @@ class BookingControllerTest {
     }
 
     @Test
-    void getUserBookingsStatusIsOk () throws Exception {
+    void getUserBookingsStatusIsOk() throws Exception {
         postUser(itemOwner);
         postItem(itemDto, 1L);
 
@@ -483,7 +483,7 @@ class BookingControllerTest {
     }
 
     @Test
-    void getUserBookingsStateNotValidStatusIsBadRequest () throws Exception {
+    void getUserBookingsStateNotValidStatusIsBadRequest() throws Exception {
         postUser(itemOwner);
         postItem(itemDto, 1L);
 
@@ -515,7 +515,7 @@ class BookingControllerTest {
     }
 
     @Test
-    void getUserBookingsByNotExistsUserStatusIsNotFound () throws Exception {
+    void getUserBookingsByNotExistsUserStatusIsNotFound() throws Exception {
         postUser(itemOwner);
         postItem(itemDto, 1L);
 
@@ -547,7 +547,7 @@ class BookingControllerTest {
     }
 
     @Test
-    void getBookingsByOwnerIdStatusIsOk () throws Exception {
+    void getBookingsByOwnerIdStatusIsOk() throws Exception {
         postUser(itemOwner);
         postItem(itemDto, 1L);
 
@@ -609,7 +609,7 @@ class BookingControllerTest {
     }
 
     @Test
-    void getBookingsByNotOwnerStatusIsNotFound () throws Exception {
+    void getBookingsByNotOwnerStatusIsNotFound() throws Exception {
         postUser(itemOwner);
         postItem(itemDto, 1L);
 
