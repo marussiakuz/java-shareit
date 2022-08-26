@@ -17,7 +17,7 @@ public interface ItemService {
 
     ItemDtoFull findItemById(long userId, long itemId);
 
-    List<ItemDtoWithBookings> getItemsByOwnerId(long userId);
+    List<ItemDtoWithBookings> getItemsByOwnerId(long userId, int from, int size);
 
-    List<ItemDto> search(String text);
+    List<ItemDto> search(String text, int from, int size);
 }
