@@ -119,11 +119,11 @@ class UserServiceImplTest {
     void delete() {
         UserDto saved = userService.save(userDto);
 
-        assertThat(saved.getId(), equalTo(1L));
+        assertThat(saved.getId(), notNullValue());
 
-        userService.delete(1L);
+        userService.delete(saved.getId());
 
-        User user = em.find(User.class, 1L);
+        User user = em.find(User.class, saved.getId());
 
         Assertions.assertNull(user);
     }

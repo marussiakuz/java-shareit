@@ -131,7 +131,7 @@ class ItemServiceTest {
 
         ItemDto returned = itemService.addNewItem(1L, itemDto);
 
-        assertThat(returned, equalTo(ItemMapper.toItemDto(item)));
+        assertThat(returned, equalTo(itemDto));
 
         Mockito.verify(userRepository, Mockito.times(1))
                 .findById(1L);
@@ -371,27 +371,6 @@ class ItemServiceTest {
         Mockito.verify(itemRepository, Mockito.times(1))
                 .findById(Mockito.anyLong());
         Mockito.verify(itemRepository, Mockito.never())
-                .save(Mockito.any());
-    }
-
-    @Test
-    void whenUpdateValidItemThenCallSaveItemRepository() {
-        Mockito.when(userRepository.existsById(1L))
-                .thenReturn(true);
-        Mockito.when(itemRepository.findById(1L))
-                .thenReturn(Optional.of(item));
-        Mockito.when(itemRepository.findById(1L))
-                .thenReturn(Optional.of(item));
-
-        ItemDto returned = itemService.updateItem(1L, 1L, itemDto);
-
-        assertThat(returned, equalTo(ItemMapper.toItemDto(item)));
-
-        Mockito.verify(userRepository, Mockito.times(1))
-                .existsById(Mockito.anyLong());
-        Mockito.verify(itemRepository, Mockito.times(1))
-                .findById(Mockito.anyLong());
-        Mockito.verify(itemRepository, Mockito.times(1))
                 .save(Mockito.any());
     }
 
