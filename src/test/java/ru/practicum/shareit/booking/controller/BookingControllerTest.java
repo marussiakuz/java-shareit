@@ -103,7 +103,7 @@ class BookingControllerTest {
                 .andExpect(MockMvcResultMatchers.jsonPath("item.name").value("book"))
                 .andExpect(MockMvcResultMatchers.jsonPath("item.description").value("on java"))
                 .andExpect(MockMvcResultMatchers.jsonPath("item.available").value(true))
-                .andExpect(MockMvcResultMatchers.jsonPath("booker.id").value("2"))
+                .andExpect(MockMvcResultMatchers.jsonPath("booker.id").value("1"))
                 .andExpect(MockMvcResultMatchers.jsonPath("booker.name").value("booker"))
                 .andExpect(MockMvcResultMatchers.jsonPath("booker.email").value("booker@gmail.com"))
                 .andExpect(MockMvcResultMatchers.jsonPath("status").value("WAITING"));
@@ -394,7 +394,7 @@ class BookingControllerTest {
     @Test
     void getBookingsByNotOwnerStatusIsNotFound() throws Exception {
         Mockito
-                .when(bookingService.getUserBookings(3L, "ALL", 0, 10))
+                .when(bookingService.getBookingsByOwnerId(3L, "ALL", 0, 10))
                 .thenThrow(new UserNotFoundException("User with id=3 is not the owner of any thing"));
 
         mockMvc.perform(get("/bookings/owner?state=ALL")

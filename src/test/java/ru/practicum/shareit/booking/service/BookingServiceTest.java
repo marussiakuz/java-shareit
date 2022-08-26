@@ -401,38 +401,6 @@ class BookingServiceTest {
     }
 
     @Test
-    void whenTryToGetUserBookingsIfFromIsNotValidThenIllegalPaginationArgumentException() {
-        Mockito.when(userRepository.existsById(1L))
-                .thenReturn(true);
-
-        final IllegalPaginationArgumentException exception = Assertions.assertThrows(
-                IllegalPaginationArgumentException.class,
-                () -> bookingService.getUserBookings(1L, "ALL", -1, 10));
-
-        Assertions.assertEquals("variable from must be greater than or equal to 0",
-                exception.getMessage());
-
-        Mockito.verify(userRepository, Mockito.times(1))
-                .existsById(Mockito.anyLong());
-    }
-
-    @Test
-    void whenTryToGetUserBookingsIfSizeIsNotValidThenIllegalPaginationArgumentException() {
-        Mockito.when(userRepository.existsById(1L))
-                .thenReturn(true);
-
-        final IllegalPaginationArgumentException exception = Assertions.assertThrows(
-                IllegalPaginationArgumentException.class,
-                () -> bookingService.getUserBookings(1L, "ALL", 0, 0));
-
-        Assertions.assertEquals("variable size must be greater than or equal to 1",
-                exception.getMessage());
-
-        Mockito.verify(userRepository, Mockito.times(1))
-                .existsById(Mockito.anyLong());
-    }
-
-    @Test
     void whenTryToGetUserBookingsByNotExistsUserThenUserNotFoundException() {
         Mockito.when(userRepository.existsById(1L))
                 .thenReturn(false);
@@ -635,38 +603,6 @@ class BookingServiceTest {
         Assertions.assertEquals("Unknown state: UNSUPPORTED_STATUS", exception.getMessage());
 
         Mockito.verify(itemRepository, Mockito.never())
-                .existsByOwnerId(Mockito.anyLong());
-    }
-
-    @Test
-    void whenTryToGetBookingsByOwnerIdIfFromIsNotValidThenIllegalPaginationArgumentException() {
-        Mockito.when(itemRepository.existsByOwnerId(1L))
-                .thenReturn(true);
-
-        final IllegalPaginationArgumentException exception = Assertions.assertThrows(
-                IllegalPaginationArgumentException.class,
-                () -> bookingService.getBookingsByOwnerId(1L, "ALL", -1, 10));
-
-        Assertions.assertEquals("variable from must be greater than or equal to 0",
-                exception.getMessage());
-
-        Mockito.verify(itemRepository, Mockito.times(1))
-                .existsByOwnerId(Mockito.anyLong());
-    }
-
-    @Test
-    void whenTryToGetBookingsByOwnerIdIfSizeIsNotValidThenIllegalPaginationArgumentException() {
-        Mockito.when(itemRepository.existsByOwnerId(1L))
-                .thenReturn(true);
-
-        final IllegalPaginationArgumentException exception = Assertions.assertThrows(
-                IllegalPaginationArgumentException.class,
-                () -> bookingService.getBookingsByOwnerId(1L, "ALL", 0, 0));
-
-        Assertions.assertEquals("variable size must be greater than or equal to 1",
-                exception.getMessage());
-
-        Mockito.verify(itemRepository, Mockito.times(1))
                 .existsByOwnerId(Mockito.anyLong());
     }
 
