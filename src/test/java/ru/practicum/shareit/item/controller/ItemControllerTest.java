@@ -7,29 +7,29 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import ru.practicum.shareit.booking.controller.BookingController;
-import ru.practicum.shareit.booking.model.dto.BookingInDto;
 import ru.practicum.shareit.errorHandler.ErrorHandler;
-import ru.practicum.shareit.errorHandler.exceptions.IllegalPaginationArgumentException;
+import ru.practicum.shareit.errorHandler.exceptions.InvalidRequestException;
 import ru.practicum.shareit.errorHandler.exceptions.ItemNotFoundException;
 import ru.practicum.shareit.errorHandler.exceptions.UserNotFoundException;
 import ru.practicum.shareit.item.model.dto.CommentDto;
 import ru.practicum.shareit.item.model.dto.ItemDto;
-import ru.practicum.shareit.user.controller.UserController;
-import ru.practicum.shareit.user.model.dto.UserDto;
+import ru.practicum.shareit.item.model.dto.ItemDtoFull;
+import ru.practicum.shareit.item.model.dto.ItemDtoWithBookings;
+import ru.practicum.shareit.item.service.ItemService;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,45 +38,44 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.liquibase.enabled=false",
-        "spring.flyway.enabled=false"
-})
-@AutoConfigureTestDatabase
-@Sql({"/schema.sql"})
+@WebMvcTest(ItemController.class)
 @AutoConfigureMockMvc
 class ItemControllerTest {
     @Autowired
     private ItemController itemController;
-    @Autowired
-    private UserController userController;
-    @Autowired
-    private BookingController bookingController;
+    @MockBean
+    private ItemService itemService;
     private MockMvc mockMvc;
     private final ObjectMapper mapper = new ObjectMapper();
-    private static UserDto itemOwner;
     private static ItemDto itemDto;
+    private static ItemDto updated;
+    private static CommentDto commentDto;
 
     @BeforeAll
     public static void beforeAll() {
-        itemOwner = UserDto.builder()
-                .email("user@yandex.ru")
-                .name("userName")
-                .build();
-
         itemDto = ItemDto.builder()
+                .id(1L)
                 .ownerId(1L)
                 .available(true)
                 .name("book")
                 .description("on java")
+                .build();
+
+        updated = ItemDto.builder()
+                .available(false)
+                .build();
+
+        commentDto = CommentDto.builder()
+                .id(1L)
+                .created(LocalDateTime.now())
+                .text("it was very useful item")
                 .build();
     }
 
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders
-                .standaloneSetup(itemController, userController, bookingController)
+                .standaloneSetup(itemController)
                 .setControllerAdvice(new ErrorHandler())
                 .build();
         mapper.registerModule(new JavaTimeModule());
@@ -84,7 +83,9 @@ class ItemControllerTest {
 
     @Test
     void createValidItemStatusIsOk() throws Exception {
-        postUser(itemOwner);
+        Mockito
+                .when(itemService.addNewItem(Mockito.anyLong(), Mockito.any(ItemDto.class)))
+                .thenReturn(itemDto);
 
         mockMvc.perform(post("/items")
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -101,19 +102,24 @@ class ItemControllerTest {
 
     @Test
     void createItemByNotExistsUserStatusIsNotFound() throws Exception {
+        Mockito
+                .when(itemService.addNewItem(2L, itemDto))
+                .thenThrow(new UserNotFoundException("User with id=2 not found"));
+
         mockMvc.perform(post("/items")
                         .characterEncoding(StandardCharsets.UTF_8)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .header("X-Sharer-User-Id", 2L)
                         .content(mapper.writeValueAsString(itemDto)))
+                .andExpect(result -> assertTrue(result.getResolvedException() instanceof UserNotFoundException))
+                .andExpect(result -> assertEquals("User with id=2 not found",
+                        Objects.requireNonNull(result.getResolvedException()).getMessage()))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void createItemWithBlankNameStatusIsBadRequest() throws Exception {
-        postUser(itemOwner);
-
         ItemDto notValidName = ItemDto.builder()
                 .name(" ")
                 .description("good")
@@ -131,8 +137,6 @@ class ItemControllerTest {
 
     @Test
     void createItemWithBlankDescriptionStatusIsBadRequest() throws Exception {
-        postUser(itemOwner);
-
         ItemDto emptyDescription = ItemDto.builder()
                 .name("book")
                 .description("")
@@ -150,9 +154,7 @@ class ItemControllerTest {
 
     @Test
     void createItemWithAvailableNullStatusIsBadRequest() throws Exception {
-        postUser(itemOwner);
-
-        ItemDto emptyDescription = ItemDto.builder()
+        ItemDto availableNull = ItemDto.builder()
                 .name("book")
                 .description("good")
                 .build();
@@ -162,34 +164,15 @@ class ItemControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .header("X-Sharer-User-Id", 1L)
-                        .content(mapper.writeValueAsString(emptyDescription)))
+                        .content(mapper.writeValueAsString(availableNull)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void postValidCommentStatusIsOk() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        UserDto booker = UserDto.builder()
-                .name("booker")
-                .email("booker@gmail.com")
-                .build();
-        postUser(booker);
-
-        BookingInDto bookingInDto = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusSeconds(2))
-                .end(LocalDateTime.now().plusSeconds(3))
-                .build();
-        postBooking(bookingInDto, 2L);
-
-        Thread.sleep(3000L);
-
-        CommentDto commentDto = CommentDto.builder()
-                .text("it was very useful item")
-                .authorName("author")
-                .build();
+        Mockito
+                .when(itemService.postComment(Mockito.any(CommentDto.class), Mockito.anyLong(), Mockito.anyLong()))
+                .thenReturn(commentDto);
 
         mockMvc.perform(post("/items/1/comment")
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -205,26 +188,9 @@ class ItemControllerTest {
 
     @Test
     void postCommentIfBookingCurrentStatusIsBadRequest() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        UserDto booker = UserDto.builder()
-                .name("booker")
-                .email("booker@gmail.com")
-                .build();
-        postUser(booker);
-
-        BookingInDto bookingInDto = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusSeconds(2))
-                .end(LocalDateTime.now().plusHours(2))
-                .build();
-        postBooking(bookingInDto, 2L);
-
-        CommentDto commentDto = CommentDto.builder()
-                .text("it was very useful item")
-                .authorName("author")
-                .build();
+        Mockito
+                .when(itemService.postComment(commentDto, 2L, 1L))
+                .thenThrow(new InvalidRequestException("The user with id=2 cannot leave a comment on the item with id=1"));
 
         mockMvc.perform(post("/items/1/comment")
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -232,29 +198,14 @@ class ItemControllerTest {
                         .accept(MediaType.APPLICATION_JSON)
                         .header("X-Sharer-User-Id", 2L)
                         .content(mapper.writeValueAsString(commentDto)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> assertTrue(result.getResolvedException() instanceof InvalidRequestException))
+                .andExpect(result -> assertEquals("The user with id=2 cannot leave a comment on the item with id=1",
+                        Objects.requireNonNull(result.getResolvedException()).getMessage()));
     }
 
     @Test
     void postEmptyCommentStatusIsBadRequest() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        UserDto booker = UserDto.builder()
-                .name("booker")
-                .email("booker@gmail.com")
-                .build();
-        postUser(booker);
-
-        BookingInDto bookingInDto = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusSeconds(2))
-                .end(LocalDateTime.now().plusSeconds(3))
-                .build();
-        postBooking(bookingInDto, 2L);
-
-        Thread.sleep(3000L);
-
         CommentDto commentDto = CommentDto.builder()
                 .text(" ")
                 .authorName("author")
@@ -271,12 +222,14 @@ class ItemControllerTest {
 
     @Test
     void updateValidItemStatusIsOk() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        ItemDto updated = ItemDto.builder()
+        ItemDto returned = ItemDto.builder()
+                .id(1L)
                 .available(false)
                 .build();
+
+        Mockito
+                .when(itemService.updateItem(1L, 1L, updated))
+                .thenReturn(returned);
 
         mockMvc.perform(patch("/items/1")
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -291,12 +244,9 @@ class ItemControllerTest {
 
     @Test
     void updateItemNotOwnerStatusIsNotFound() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        ItemDto updated = ItemDto.builder()
-                .available(false)
-                .build();
+        Mockito
+                .when(itemService.updateItem(2L, 1L, updated))
+                .thenThrow(new UserNotFoundException("User with id=2 not found"));
 
         mockMvc.perform(patch("/items/1")
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -312,12 +262,9 @@ class ItemControllerTest {
 
     @Test
     void updateNotExistsItemStatusIsNotFound() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        ItemDto updated = ItemDto.builder()
-                .available(false)
-                .build();
+        Mockito
+                .when(itemService.updateItem(1L, 2L, updated))
+                .thenThrow(new ItemNotFoundException("Item with id=2 not found"));
 
         mockMvc.perform(patch("/items/2")
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -333,8 +280,16 @@ class ItemControllerTest {
 
     @Test
     void getByItemIdIsOk() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
+        ItemDtoFull itemDtoFull = ItemDtoFull.builder()
+                .id(1L).name("book")
+                .description("on java")
+                .ownerId(1L)
+                .available(true)
+                .build();
+
+        Mockito
+                .when(itemService.findItemById(1L, 1L))
+                .thenReturn(itemDtoFull);
 
         mockMvc.perform(get("/items/1")
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -351,8 +306,9 @@ class ItemControllerTest {
 
     @Test
     void getByItemIdNotExistsItemIsNotFound() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
+        Mockito
+                .when(itemService.findItemById(2L, 2L))
+                .thenThrow(new ItemNotFoundException("Item with id=2 not found"));
 
         mockMvc.perform(get("/items/2")
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -367,27 +323,21 @@ class ItemControllerTest {
 
     @Test
     void getByUserIdStatusIsOk() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        UserDto anotherUser = UserDto.builder()
-                .name("anotherUser")
-                .email("a@gmail.com")
+        ItemDtoWithBookings first = ItemDtoWithBookings.builder()
+                .id(1L)
+                .name("book")
+                .description("on java")
                 .build();
-        postUser(anotherUser);
-
-        ItemDto ownerItem = ItemDto.builder()
+        ItemDtoWithBookings second = ItemDtoWithBookings.builder()
+                .id(2L)
                 .name("good item")
                 .description("very good")
-                .available(true)
                 .build();
-        postItem(ownerItem, 1L);
-        ItemDto anotherUserItem = ItemDto.builder()
-                .available(true)
-                .name("useful item")
-                .description("very necessary")
-                .build();
-        postItem(anotherUserItem, 2L);
+        List<ItemDtoWithBookings> items = List.of(first, second);
+
+        Mockito
+                .when(itemService.getItemsByOwnerId(1L, 0, 10))
+                .thenReturn(items);
 
         mockMvc.perform(get("/items")
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -404,44 +354,17 @@ class ItemControllerTest {
     }
 
     @Test
-    void getByUserIdInvalidPageArgumentsStatusIsBadRequest() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        mockMvc.perform(get("/items?from=-1&size=20")
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .header("X-Sharer-User-Id", 1L))
-                .andExpect(status().isBadRequest())
-                .andExpect(result -> assertTrue(result.getResolvedException() instanceof IllegalPaginationArgumentException))
-                .andExpect(result -> assertEquals("variable from must be greater than or equal to 0",
-                        Objects.requireNonNull(result.getResolvedException()).getMessage()));
-    }
-
-    @Test
     void searchStatusIsOk() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        UserDto anotherUser = UserDto.builder()
-                .name("anotherUser")
-                .email("a@gmail.com")
-                .build();
-        postUser(anotherUser);
-
         ItemDto ownerItem = ItemDto.builder()
+                .id(2L)
                 .name("good item")
                 .description("very good")
                 .available(true)
                 .build();
-        postItem(ownerItem, 1L);
-        ItemDto anotherUserItem = ItemDto.builder()
-                .available(true)
-                .name("useful item")
-                .description("very necessary")
-                .build();
-        postItem(anotherUserItem, 2L);
+
+        Mockito
+                .when(itemService.search("gOOd", 0, 10))
+                .thenReturn(List.of(ownerItem));
 
         mockMvc.perform(get("/items/search?text=gOOd&from=0&size=10")
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -451,43 +374,5 @@ class ItemControllerTest {
                 .andExpect(MockMvcResultMatchers.jsonPath("$[0].id").value("2"))
                 .andExpect(MockMvcResultMatchers.jsonPath("$[0].name").value("good item"))
                 .andExpect(MockMvcResultMatchers.jsonPath("$[0].description").value("very good"));
-    }
-
-    @Test
-    void searchInvalidPageArgumentsStatusIsBadRequest() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        mockMvc.perform(get("/items/search?text=JaVa&from=0&size=-2")
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest())
-                .andExpect(result -> assertTrue(result.getResolvedException() instanceof IllegalPaginationArgumentException))
-                .andExpect(result -> assertEquals("variable size must be greater than or equal to 1",
-                        Objects.requireNonNull(result.getResolvedException()).getMessage()));
-    }
-
-    private void postUser(UserDto userDto) throws Exception {
-        mockMvc.perform(post("/users")
-                        .contentType("application/json")
-                        .content(mapper.writeValueAsString(userDto)))
-                .andExpect(status().isOk());
-    }
-
-    private void postItem(ItemDto itemDto, long userId) throws Exception {
-        mockMvc.perform(post("/items")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Sharer-User-Id", userId)
-                        .content(mapper.writeValueAsString(itemDto)))
-                .andExpect(status().isOk());
-    }
-
-    private void postBooking(BookingInDto bookingInDto, long userId) throws Exception {
-        mockMvc.perform(post("/bookings")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Sharer-User-Id", userId)
-                        .content(mapper.writeValueAsString(bookingInDto)))
-                .andExpect(status().isOk());
     }
 }

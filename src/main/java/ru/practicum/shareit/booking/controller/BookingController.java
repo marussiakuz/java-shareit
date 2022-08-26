@@ -1,6 +1,7 @@
 package ru.practicum.shareit.booking.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import ru.practicum.shareit.booking.model.dto.BookingInDto;
@@ -8,9 +9,13 @@ import ru.practicum.shareit.booking.model.dto.BookingOutDto;
 import ru.practicum.shareit.booking.service.BookingService;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Positive;
+import javax.validation.constraints.PositiveOrZero;
 
 import java.util.List;
 
+@Validated
 @RestController
 @RequestMapping(path = "/bookings")
 public class BookingController {
@@ -43,9 +48,9 @@ public class BookingController {
                                                @RequestParam(value = "state", required = false, defaultValue = "ALL")
                                                    String state,
                                                @RequestParam(value = "from", required = false, defaultValue = "0")
-                                                   int from,
+                                                   @PositiveOrZero int from,
                                                @RequestParam(value = "size", required = false, defaultValue = "10")
-                                                   int size) {
+                                                   @Positive @Min(1) int size) {
         return bookingService.getUserBookings(userId, state, from, size);
     }
 
@@ -54,9 +59,9 @@ public class BookingController {
                                                     @RequestParam(value = "state", required = false, defaultValue = "ALL")
                                                         String state,
                                                     @RequestParam (value = "from", required = false, defaultValue = "0")
-                                                        int from,
+                                                        @PositiveOrZero int from,
                                                     @RequestParam (value = "size", required = false, defaultValue = "10")
-                                                        int size) {
+                                                        @Positive @Min(1) int size) {
         return bookingService.getBookingsByOwnerId(userId, state, from, size);
     }
 }

@@ -3,7 +3,6 @@ package ru.practicum.shareit.utils;
 import lombok.Data;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import ru.practicum.shareit.errorHandler.exceptions.IllegalPaginationArgumentException;
 
 @Data
 public class Pagination implements Pageable {
@@ -50,7 +49,8 @@ public class Pagination implements Pageable {
 
     @Override
     public Pageable previousOrFirst() {
-        return new Pagination(from, size, sort);
+        if ((from - size) > 0) return new Pagination(from - size, size, sort);
+        return new Pagination(0, size, sort);
     }
 
     @Override
@@ -65,23 +65,14 @@ public class Pagination implements Pageable {
 
     @Override
     public boolean hasPrevious() {
-        return false;
+        return from != 0;
     }
 
     public static Pageable of(int from, int size) {
-        validateArguments(from, size);
         return new Pagination(from, size);
     }
 
     public static Pageable of(int from, int size, Sort sort) {
-        validateArguments(from, size);
         return new Pagination(from, size, sort);
-    }
-
-    private static void validateArguments(int from, int size) {
-        if (from < 0)
-            throw new IllegalPaginationArgumentException("variable from must be greater than or equal to 0");
-        if (size < 1)
-            throw new IllegalPaginationArgumentException("variable size must be greater than or equal to 1");
     }
 }

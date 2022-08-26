@@ -7,26 +7,28 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import ru.practicum.shareit.errorHandler.ErrorHandler;
-import ru.practicum.shareit.errorHandler.exceptions.IllegalPaginationArgumentException;
 import ru.practicum.shareit.errorHandler.exceptions.RequestNotFoundException;
 import ru.practicum.shareit.errorHandler.exceptions.UserNotFoundException;
-import ru.practicum.shareit.item.controller.ItemController;
 import ru.practicum.shareit.item.model.dto.ItemDto;
+import ru.practicum.shareit.request.model.dto.RequestDto;
+import ru.practicum.shareit.request.model.dto.RequestDtoWithItems;
 import ru.practicum.shareit.request.model.dto.RequestInDto;
-import ru.practicum.shareit.user.controller.UserController;
+import ru.practicum.shareit.request.service.RequestService;
 import ru.practicum.shareit.user.model.dto.UserDto;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,25 +38,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.liquibase.enabled=false",
-        "spring.flyway.enabled=false"
-})
-@AutoConfigureTestDatabase
-@Sql({"/schema.sql"})
+@WebMvcTest(RequestController.class)
 @AutoConfigureMockMvc
 class RequestControllerTest {
     @Autowired
-    private ItemController itemController;
-    @Autowired
-    private UserController userController;
-    @Autowired
     private RequestController requestController;
+    @MockBean
+    private RequestService requestService;
     private MockMvc mockMvc;
     private final ObjectMapper mapper = new ObjectMapper();
     private static UserDto userDto;
     private static RequestInDto requestInDto;
+    private static RequestDto requestDto;
 
     @BeforeAll
     public static void beforeAll() {
@@ -66,21 +61,29 @@ class RequestControllerTest {
         requestInDto = RequestInDto.builder()
                 .description("I need book on java")
                 .build();
+
+        requestDto = RequestDto.builder()
+                .id(1L)
+                .userId(1L)
+                .description("I need book on java")
+                .created(LocalDateTime.now())
+                .build();
     }
 
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders
-                .standaloneSetup(itemController, userController, requestController)
+                .standaloneSetup(requestController)
                 .setControllerAdvice(new ErrorHandler())
                 .build();
         mapper.registerModule(new JavaTimeModule());
     }
 
-
     @Test
     void createValidRequestStatusIsOk() throws Exception {
-        postUser(userDto);
+        Mockito
+                .when(requestService.addNewRequest(1L, requestInDto))
+                .thenReturn(requestDto);
 
         mockMvc.perform(post("/requests")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -95,6 +98,10 @@ class RequestControllerTest {
 
     @Test
     void createRequestByNotExistsUserStatusIsNotFound() throws Exception {
+        Mockito
+                .when(requestService.addNewRequest(1L, requestInDto))
+                .thenThrow(new UserNotFoundException("User with id=1 not found"));
+
         mockMvc.perform(post("/requests")
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("X-Sharer-User-Id", 1L)
@@ -120,35 +127,27 @@ class RequestControllerTest {
 
     @Test
     void getAllByUserIdStatusIsOk() throws Exception {
-        postUser(userDto);
-
-        UserDto anotherUser = UserDto.builder()
-                .name("another")
-                .email("another@gmail.com")
+        RequestDtoWithItems first = RequestDtoWithItems.builder()
+                .id(2L)
+                .description("second")
+                .items(List.of(ItemDto.builder()
+                        .id(1L)
+                        .ownerId(2L)
+                        .requestId(2L)
+                        .available(true)
+                        .name("two")
+                        .description("very useful")
+                        .build()))
                 .build();
-        postUser(anotherUser);
-
-        RequestInDto first = RequestInDto.builder()
+        RequestDtoWithItems second = RequestDtoWithItems.builder()
+                .id(1L)
                 .description("first")
                 .build();
-        postRequest(first, 1L);
-        RequestInDto second = RequestInDto.builder()
-                .description("second")
-                .build();
-        postRequest(second, 1L);
-        RequestInDto another = RequestInDto.builder()
-                .description("another")
-                .build();
-        postRequest(another, 2L);
+        List<RequestDtoWithItems> requests = List.of(first, second);
 
-        ItemDto itemToSecondRequest = ItemDto.builder()
-                .requestId(2L)
-                .available(true)
-                .name("two")
-                .description("very useful")
-                .build();
-
-        postItem(itemToSecondRequest, 2L);
+        Mockito
+                .when(requestService.findRequestsByUserId(1L))
+                .thenReturn(requests);
 
         mockMvc.perform(get("/requests")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -169,16 +168,9 @@ class RequestControllerTest {
 
     @Test
     void getAllByUserIdByNotExistsUserStatusIsNotFound() throws Exception {
-        postUser(userDto);
-
-        RequestInDto first = RequestInDto.builder()
-                .description("first")
-                .build();
-        postRequest(first, 1L);
-        RequestInDto second = RequestInDto.builder()
-                .description("second")
-                .build();
-        postRequest(second, 1L);
+        Mockito
+                .when(requestService.findRequestsByUserId(3L))
+                .thenThrow(new UserNotFoundException("User with id=3 not found"));
 
         mockMvc.perform(get("/requests")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -192,26 +184,19 @@ class RequestControllerTest {
 
     @Test
     void getAllAnotherUsersRequestsStatusIsOk() throws Exception {
-        postUser(userDto);
-
-        UserDto anotherUser = UserDto.builder()
-                .name("another")
-                .email("another@gmail.com")
-                .build();
-        postUser(anotherUser);
-
-        RequestInDto first = RequestInDto.builder()
-                .description("first")
-                .build();
-        postRequest(first, 1L);
-        RequestInDto second = RequestInDto.builder()
+        RequestDtoWithItems first = RequestDtoWithItems.builder()
+                .id(2L)
                 .description("second")
                 .build();
-        postRequest(second, 1L);
-        RequestInDto another = RequestInDto.builder()
-                .description("another")
+        RequestDtoWithItems second = RequestDtoWithItems.builder()
+                .id(1L)
+                .description("first")
                 .build();
-        postRequest(another, 2L);
+        List<RequestDtoWithItems> requests = List.of(first, second);
+
+        Mockito
+                .when(requestService.findAllAnotherUsersRequests(2L, 0, 5))
+                .thenReturn(requests);
 
         mockMvc.perform(get("/requests/all?from=0&size=5")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -226,42 +211,15 @@ class RequestControllerTest {
     }
 
     @Test
-    void getAllInvalidPageArgumentsStatusIsBadRequest() throws Exception {
-        postUser(userDto);
-
-        UserDto anotherUser = UserDto.builder()
-                .name("another")
-                .email("another@gmail.com")
-                .build();
-        postUser(anotherUser);
-
-        RequestInDto first = RequestInDto.builder()
-                .description("first")
-                .build();
-        postRequest(first, 1L);
-        RequestInDto second = RequestInDto.builder()
-                .description("second")
-                .build();
-        postRequest(second, 1L);
-        RequestInDto another = RequestInDto.builder()
-                .description("another")
-                .build();
-        postRequest(another, 2L);
-
-        mockMvc.perform(get("/requests/all?from=0&size=-5")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Sharer-User-Id", 2L)
-                        .content(mapper.writeValueAsString(requestInDto)))
-                .andExpect(status().isBadRequest())
-                .andExpect(result -> assertTrue(result.getResolvedException() instanceof IllegalPaginationArgumentException))
-                .andExpect(result -> assertEquals("variable size must be greater than or equal to 1",
-                        Objects.requireNonNull(result.getResolvedException()).getMessage()));
-    }
-
-    @Test
     void getByRequestIdStatusIsOk() throws Exception {
-        postUser(userDto);
-        postRequest(requestInDto, 1L);
+        RequestDtoWithItems requestDtoWithItems = RequestDtoWithItems.builder()
+                .id(1L)
+                .description("I need book on java")
+                .build();
+
+        Mockito
+                .when(requestService.getById(1L, 1L))
+                .thenReturn(requestDtoWithItems);
 
         mockMvc.perform(get("/requests/1")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -274,6 +232,10 @@ class RequestControllerTest {
 
     @Test
     void getByRequestIdByNotExistsUserStatusIsNotFound() throws Exception {
+        Mockito
+                .when(requestService.getById(1L, 1L))
+                .thenThrow(new UserNotFoundException("User with id=1 not found"));
+
         mockMvc.perform(get("/requests/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("X-Sharer-User-Id", 1L)
@@ -286,38 +248,16 @@ class RequestControllerTest {
 
     @Test
     void getByNotExistsRequestIdStatusIsNotFound() throws Exception {
-        postUser(userDto);
+        Mockito
+                .when(requestService.getById(1L, 5L))
+                .thenThrow(new RequestNotFoundException("Request with id=5 not found"));
 
         mockMvc.perform(get("/requests/5")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Sharer-User-Id", 1L)
-                        .content(mapper.writeValueAsString(requestInDto)))
+                        .header("X-Sharer-User-Id", 1L))
                 .andExpect(status().isNotFound())
                 .andExpect(result -> assertTrue(result.getResolvedException() instanceof RequestNotFoundException))
                 .andExpect(result -> assertEquals("Request with id=5 not found",
                         Objects.requireNonNull(result.getResolvedException()).getMessage()));
-    }
-
-    private void postUser(UserDto userDto) throws Exception {
-        mockMvc.perform(post("/users")
-                        .contentType("application/json")
-                        .content(mapper.writeValueAsString(userDto)))
-                .andExpect(status().isOk());
-    }
-
-    private void postItem(ItemDto itemDto, long userId) throws Exception {
-        mockMvc.perform(post("/items")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Sharer-User-Id", userId)
-                        .content(mapper.writeValueAsString(itemDto)))
-                .andExpect(status().isOk());
-    }
-
-    private void postRequest(RequestInDto requestInDto, long userId) throws Exception {
-        mockMvc.perform(post("/requests")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Sharer-User-Id", userId)
-                        .content(mapper.writeValueAsString(requestInDto)))
-                .andExpect(status().isOk());
     }
 }

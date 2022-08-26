@@ -7,29 +7,31 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import ru.practicum.shareit.booking.model.dto.BookingInDto;
+import ru.practicum.shareit.booking.model.dto.BookingOutDto;
+import ru.practicum.shareit.booking.service.BookingService;
 import ru.practicum.shareit.errorHandler.ErrorHandler;
 import ru.practicum.shareit.errorHandler.exceptions.BookingNotFoundException;
 import ru.practicum.shareit.errorHandler.exceptions.InvalidRequestException;
 import ru.practicum.shareit.errorHandler.exceptions.ItemNotFoundException;
 import ru.practicum.shareit.errorHandler.exceptions.UserNotFoundException;
-import ru.practicum.shareit.item.controller.ItemController;
-import ru.practicum.shareit.item.model.dto.ItemDto;
-import ru.practicum.shareit.user.controller.UserController;
-import ru.practicum.shareit.user.model.dto.UserDto;
+import ru.practicum.shareit.item.model.Item;
+import ru.practicum.shareit.user.model.User;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,45 +40,46 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.liquibase.enabled=false",
-        "spring.flyway.enabled=false"
-})
-@AutoConfigureTestDatabase
-@Sql({"/schema.sql"})
+@WebMvcTest(BookingController.class)
 @AutoConfigureMockMvc
 class BookingControllerTest {
     @Autowired
-    private ItemController itemController;
-    @Autowired
-    private UserController userController;
-    @Autowired
     private BookingController bookingController;
+    @MockBean
+    private BookingService bookingService;
     private MockMvc mockMvc;
     private final ObjectMapper mapper = new ObjectMapper();
-    private static UserDto itemOwner;
-    private static ItemDto itemDto;
+    private static BookingInDto bookingInDto;
+    private static BookingOutDto bookingOutDto;
+    private static BookingOutDto approved;
 
     @BeforeAll
     public static void beforeAll() {
-        itemOwner = UserDto.builder()
-                .email("user@yandex.ru")
-                .name("userName")
+        bookingOutDto = BookingOutDto.builder()
+                .id(1L)
+                .item(Item.builder().id(1L).name("book").description("on java").available(true).build())
+                .booker(User.builder().id(1L).name("booker").email("booker@gmail.com").build())
+                .status("WAITING")
                 .build();
 
-        itemDto = ItemDto.builder()
-                .ownerId(1L)
-                .available(true)
-                .name("book")
-                .description("on java")
+        approved = BookingOutDto.builder()
+                .id(1L)
+                .item(Item.builder().id(1L).name("book").description("on java").available(true).build())
+                .booker(User.builder().id(1L).name("booker").email("booker@gmail.com").build())
+                .status("APPROVED")
+                .build();
+
+        bookingInDto = BookingInDto.builder()
+                .itemId(1L)
+                .start(LocalDateTime.now().plusSeconds(2))
+                .end(LocalDateTime.now().plusSeconds(3))
                 .build();
     }
 
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders
-                .standaloneSetup(itemController, userController, bookingController)
+                .standaloneSetup(bookingController)
                 .setControllerAdvice(new ErrorHandler())
                 .build();
         mapper.registerModule(new JavaTimeModule());
@@ -84,20 +87,9 @@ class BookingControllerTest {
 
     @Test
     void addValidBookingStatusIsOk() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        UserDto booker = UserDto.builder()
-                .name("booker")
-                .email("booker@gmail.com")
-                .build();
-        postUser(booker);
-
-        BookingInDto bookingInDto = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusSeconds(2))
-                .end(LocalDateTime.now().plusSeconds(3))
-                .build();
+        Mockito
+                .when(bookingService.addNewBooking(2L, bookingInDto))
+                .thenReturn(bookingOutDto);
 
         mockMvc.perform(post("/bookings")
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -119,16 +111,9 @@ class BookingControllerTest {
 
     @Test
     void addBookingByOwnerOfItemStatusIsNotFound() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        BookingInDto bookingInDto = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusHours(2))
-                .end(LocalDateTime.now().plusHours(3))
-                .build();
-
-        mapper.registerModule(new JavaTimeModule());
+        Mockito
+                .when(bookingService.addNewBooking(1L, bookingInDto))
+                .thenThrow(new ItemNotFoundException("the user trying to book his own item"));
 
         mockMvc.perform(post("/bookings")
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -144,13 +129,9 @@ class BookingControllerTest {
 
     @Test
     void addBookingNotExistsItemStatusIsNotFound() throws Exception {
-        postUser(itemOwner);
-
-        BookingInDto bookingInDto = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusSeconds(2))
-                .end(LocalDateTime.now().plusSeconds(3))
-                .build();
+        Mockito
+                .when(bookingService.addNewBooking(1L, bookingInDto))
+                .thenThrow(new ItemNotFoundException("Item with id=1 not found"));
 
         mockMvc.perform(post("/bookings")
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -166,14 +147,9 @@ class BookingControllerTest {
 
     @Test
     void addBookingByNotExistsUserStatusIsNotFound() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        BookingInDto bookingInDto = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusSeconds(2))
-                .end(LocalDateTime.now().plusSeconds(3))
-                .build();
+        Mockito
+                .when(bookingService.addNewBooking(5L, bookingInDto))
+                .thenThrow(new UserNotFoundException("User with id=5 not found"));
 
         mockMvc.perform(post("/bookings")
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -189,26 +165,9 @@ class BookingControllerTest {
 
     @Test
     void addBookingNotAvailableItemStatusIsBadRequest() throws Exception {
-        postUser(itemOwner);
-
-        ItemDto notAvailableItem = ItemDto.builder()
-                .name("book")
-                .description("Thinking on java")
-                .available(false)
-                .build();
-        postItem(notAvailableItem, 1L);
-
-        UserDto booker = UserDto.builder()
-                .name("booker")
-                .email("booker@gmail.com")
-                .build();
-        postUser(booker);
-
-        BookingInDto bookingInDto = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusSeconds(2))
-                .end(LocalDateTime.now().plusSeconds(3))
-                .build();
+        Mockito
+                .when(bookingService.addNewBooking(2L, bookingInDto))
+                .thenThrow(new InvalidRequestException("booking attempt failed due to incorrect data"));
 
         mockMvc.perform(post("/bookings")
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -216,26 +175,16 @@ class BookingControllerTest {
                         .accept(MediaType.APPLICATION_JSON)
                         .header("X-Sharer-User-Id", 2L)
                         .content(mapper.writeValueAsString(bookingInDto)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> assertEquals("booking attempt failed due to incorrect data",
+                Objects.requireNonNull(result.getResolvedException()).getMessage()));
     }
 
     @Test
     void updateStatusIsOk() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        UserDto booker = UserDto.builder()
-                .name("booker")
-                .email("booker@gmail.com")
-                .build();
-        postUser(booker);
-
-        BookingInDto bookingInDto = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusSeconds(2))
-                .end(LocalDateTime.now().plusSeconds(3))
-                .build();
-        postBooking(bookingInDto, 2L);
+        Mockito
+                .when(bookingService.updateStatus(1L, 1L, true))
+                .thenReturn(approved);
 
         mockMvc.perform(patch("/bookings/1?approved=true")
                         .header("X-Sharer-User-Id", 1L))
@@ -246,6 +195,10 @@ class BookingControllerTest {
 
     @Test
     void updateStatusNotExistsBookingStatusIsNotFound() throws Exception {
+        Mockito
+                .when(bookingService.updateStatus(3L, 1L, true))
+                .thenThrow(new BookingNotFoundException("Booking with id=1 not found"));
+
         mockMvc.perform(patch("/bookings/1?approved=true")
                         .header("X-Sharer-User-Id", 3L))
                 .andExpect(result -> assertTrue(result.getResolvedException() instanceof BookingNotFoundException))
@@ -256,21 +209,9 @@ class BookingControllerTest {
 
     @Test
     void updateStatusThisUsersBookingsNotExistsStatusIsNotFound() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        UserDto booker = UserDto.builder()
-                .name("booker")
-                .email("booker@gmail.com")
-                .build();
-        postUser(booker);
-
-        BookingInDto bookingInDto = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusSeconds(2))
-                .end(LocalDateTime.now().plusSeconds(3))
-                .build();
-        postBooking(bookingInDto, 2L);
+        Mockito
+                .when(bookingService.updateStatus(3L, 1L, true))
+                .thenThrow(new BookingNotFoundException("booking with id=1 for the user with id=3 was not found"));
 
         mockMvc.perform(patch("/bookings/1?approved=true")
                         .header("X-Sharer-User-Id", 3L))
@@ -282,27 +223,9 @@ class BookingControllerTest {
 
     @Test
     void updateStatusWhichApprovedStatusIsBadRequest() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        UserDto booker = UserDto.builder()
-                .name("booker")
-                .email("booker@gmail.com")
-                .build();
-        postUser(booker);
-
-        BookingInDto bookingInDto = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusHours(2))
-                .end(LocalDateTime.now().plusHours(3))
-                .build();
-        postBooking(bookingInDto, 2L);
-
-        mockMvc.perform(patch("/bookings/1?approved=true")
-                        .header("X-Sharer-User-Id", 1L))
-                .andExpect(status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("id").value("1"))
-                .andExpect(MockMvcResultMatchers.jsonPath("status").value("APPROVED"));
+        Mockito
+                .when(bookingService.updateStatus(1L, 1L, false))
+                .thenThrow(new InvalidRequestException("the status cannot be changed"));
 
         mockMvc.perform(patch("/bookings/1?approved=false")
                         .header("X-Sharer-User-Id", 1L))
@@ -313,60 +236,10 @@ class BookingControllerTest {
     }
 
     @Test
-    void getNotExistsBookingByIdStatusIsOk() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        UserDto booker = UserDto.builder()
-                .name("booker")
-                .email("booker@gmail.com")
-                .build();
-        postUser(booker);
-
-        BookingInDto bookingInDto = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusHours(2))
-                .end(LocalDateTime.now().plusDays(3))
-                .build();
-        postBooking(bookingInDto, 2L);
-
-        mockMvc.perform(get("/bookings/1")
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .header("X-Sharer-User-Id", 2L)
-                        .content(mapper.writeValueAsString(bookingInDto)))
-                .andExpect(status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("id").value("1"))
-                .andExpect(MockMvcResultMatchers.jsonPath("item.id").value("1"))
-                .andExpect(MockMvcResultMatchers.jsonPath("item.name").value("book"))
-                .andExpect(MockMvcResultMatchers.jsonPath("item.description").value("on java"))
-                .andExpect(MockMvcResultMatchers.jsonPath("item.available").value(true))
-                .andExpect(MockMvcResultMatchers.jsonPath("booker.id").value("2"))
-                .andExpect(MockMvcResultMatchers.jsonPath("booker.name").value("booker"))
-                .andExpect(MockMvcResultMatchers.jsonPath("booker.email").value("booker@gmail.com"))
-                .andExpect(MockMvcResultMatchers.jsonPath("start").exists())
-                .andExpect(MockMvcResultMatchers.jsonPath("end").exists())
-                .andExpect(MockMvcResultMatchers.jsonPath("status").value("WAITING"));
-    }
-
-    @Test
     void getBookingByIdStatusIsOk() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        UserDto booker = UserDto.builder()
-                .name("booker")
-                .email("booker@gmail.com")
-                .build();
-        postUser(booker);
-
-        BookingInDto bookingInDto = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusHours(2))
-                .end(LocalDateTime.now().plusDays(3))
-                .build();
-        postBooking(bookingInDto, 2L);
+        Mockito
+                .when(bookingService.getById(2L, 1L))
+                .thenReturn(bookingOutDto);
 
         mockMvc.perform(get("/bookings/1")
                         .header("X-Sharer-User-Id", 2L))
@@ -376,17 +249,17 @@ class BookingControllerTest {
                 .andExpect(MockMvcResultMatchers.jsonPath("item.name").value("book"))
                 .andExpect(MockMvcResultMatchers.jsonPath("item.description").value("on java"))
                 .andExpect(MockMvcResultMatchers.jsonPath("item.available").value(true))
-                .andExpect(MockMvcResultMatchers.jsonPath("booker.id").value("2"))
+                .andExpect(MockMvcResultMatchers.jsonPath("booker.id").value("1"))
                 .andExpect(MockMvcResultMatchers.jsonPath("booker.name").value("booker"))
                 .andExpect(MockMvcResultMatchers.jsonPath("booker.email").value("booker@gmail.com"))
-                .andExpect(MockMvcResultMatchers.jsonPath("start").exists())
-                .andExpect(MockMvcResultMatchers.jsonPath("end").exists())
                 .andExpect(MockMvcResultMatchers.jsonPath("status").value("WAITING"));
     }
 
     @Test
     void getNotExistsBookingByIdStatusIsNotFound() throws Exception {
-        postUser(itemOwner);
+        Mockito
+                .when(bookingService.getById(1L, 2L))
+                .thenThrow(new BookingNotFoundException("Booking with id=2 not found"));
 
         mockMvc.perform(get("/bookings/2")
                         .header("X-Sharer-User-Id", 1L))
@@ -398,27 +271,9 @@ class BookingControllerTest {
 
     @Test
     void getBookingByIdByUserNotOwnerAndNotBookerStatusIsNotFound() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        UserDto booker = UserDto.builder()
-                .name("booker")
-                .email("booker@gmail.com")
-                .build();
-        postUser(booker);
-
-        BookingInDto bookingInDto = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusHours(2))
-                .end(LocalDateTime.now().plusDays(3))
-                .build();
-        postBooking(bookingInDto, 2L);
-
-        UserDto notBookerNotOwner = UserDto.builder()
-                .name("somebody")
-                .email("smbd@gmail.com")
-                .build();
-        postUser(notBookerNotOwner);
+        Mockito
+                .when(bookingService.getById(3L, 1L))
+                .thenThrow(new BookingNotFoundException("booking with id=1 for the user with id=3 was not found"));
 
         mockMvc.perform(get("/bookings/1")
                         .header("X-Sharer-User-Id", 3L))
@@ -430,43 +285,25 @@ class BookingControllerTest {
 
     @Test
     void getUserBookingsStatusIsOk() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
+        List<BookingOutDto> bookings = new ArrayList<>();
+        BookingOutDto firstBooking = BookingOutDto.builder()
+                .id(2L)
+                .item(Item.builder().id(1L).build())
+                .booker(User.builder().id(2L).build())
+                .status("REJECTED")
+                .build();
+        BookingOutDto secondBooking = BookingOutDto.builder()
+                .id(1L)
+                .item(Item.builder().id(1L).build())
+                .booker(User.builder().id(2L).build())
+                .status("WAITING")
+                .build();
+        bookings.add(firstBooking);
+        bookings.add(secondBooking);
 
-        UserDto booker = UserDto.builder()
-                .name("booker")
-                .email("booker@gmail.com")
-                .build();
-        postUser(booker);
-
-        UserDto secondBooker = UserDto.builder()
-                .name("somebody")
-                .email("smbd@gmail.com")
-                .build();
-        postUser(secondBooker);
-
-        BookingInDto firstBooking = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusHours(2))
-                .end(LocalDateTime.now().plusDays(1))
-                .build();
-        postBooking(firstBooking, 2L);
-        BookingInDto secondBooking = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusDays(2))
-                .end(LocalDateTime.now().plusDays(3))
-                .build();
-        postBooking(secondBooking, 2L);
-        BookingInDto bookingOfSecondBooker = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusDays(5))
-                .end(LocalDateTime.now().plusDays(6))
-                .build();
-        postBooking(bookingOfSecondBooker, 3L);
-
-        mockMvc.perform(patch("/bookings/2?approved=false")
-                        .header("X-Sharer-User-Id", 1L))
-                .andExpect(status().isOk());
+        Mockito
+                .when(bookingService.getUserBookings(2L, "ALL", 0, 10))
+                .thenReturn(bookings);
 
         mockMvc.perform(get("/bookings?state=ALL")
                         .header("X-Sharer-User-Id", 2L))
@@ -484,27 +321,9 @@ class BookingControllerTest {
 
     @Test
     void getUserBookingsStateNotValidStatusIsBadRequest() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        UserDto booker = UserDto.builder()
-                .name("booker")
-                .email("booker@gmail.com")
-                .build();
-        postUser(booker);
-
-        BookingInDto firstBooking = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusHours(2))
-                .end(LocalDateTime.now().plusDays(1))
-                .build();
-        postBooking(firstBooking, 2L);
-        BookingInDto secondBooking = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusDays(2))
-                .end(LocalDateTime.now().plusDays(3))
-                .build();
-        postBooking(secondBooking, 2L);
+        Mockito
+                .when(bookingService.getUserBookings(2L, "EVERY", 0, 10))
+                .thenThrow(new InvalidRequestException("Unknown state: UNSUPPORTED_STATUS"));
 
         mockMvc.perform(get("/bookings?state=EVERY")
                         .header("X-Sharer-User-Id", 2L))
@@ -516,27 +335,9 @@ class BookingControllerTest {
 
     @Test
     void getUserBookingsByNotExistsUserStatusIsNotFound() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        UserDto booker = UserDto.builder()
-                .name("booker")
-                .email("booker@gmail.com")
-                .build();
-        postUser(booker);
-
-        BookingInDto firstBooking = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusHours(2))
-                .end(LocalDateTime.now().plusDays(1))
-                .build();
-        postBooking(firstBooking, 2L);
-        BookingInDto secondBooking = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusDays(2))
-                .end(LocalDateTime.now().plusDays(3))
-                .build();
-        postBooking(secondBooking, 2L);
+        Mockito
+                .when(bookingService.getUserBookings(5L, "ALL", 0, 10))
+                .thenThrow(new UserNotFoundException("User with id=5 not found"));
 
         mockMvc.perform(get("/bookings?state=ALL")
                         .header("X-Sharer-User-Id", 5L))
@@ -548,47 +349,29 @@ class BookingControllerTest {
 
     @Test
     void getBookingsByOwnerIdStatusIsOk() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        UserDto booker = UserDto.builder()
-                .name("booker")
-                .email("booker@gmail.com")
+        BookingOutDto firstBooking = BookingOutDto.builder()
+                .id(3L)
+                .item(Item.builder().id(1L).build())
+                .booker(User.builder().id(3L).build())
+                .status("APPROVED")
                 .build();
-        postUser(booker);
-        UserDto secondBooker = UserDto.builder()
-                .name("somebody")
-                .email("smbd@gmail.com")
+        BookingOutDto secondBooking = BookingOutDto.builder()
+                .id(2L)
+                .item(Item.builder().id(1L).build())
+                .booker(User.builder().id(2L).build())
+                .status("REJECTED")
                 .build();
-        postUser(secondBooker);
-
-        BookingInDto firstBooking = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusHours(2))
-                .end(LocalDateTime.now().plusDays(1))
+        BookingOutDto thirdBooking = BookingOutDto.builder()
+                .id(1L)
+                .item(Item.builder().id(1L).build())
+                .booker(User.builder().id(2L).build())
+                .status("WAITING")
                 .build();
-        postBooking(firstBooking, 2L);
-        BookingInDto secondBooking = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusDays(2))
-                .end(LocalDateTime.now().plusDays(3))
-                .build();
-        postBooking(secondBooking, 2L);
+        List<BookingOutDto> bookings = new ArrayList<>(List.of(firstBooking, secondBooking, thirdBooking));
 
-        mockMvc.perform(patch("/bookings/2?approved=false")
-                        .header("X-Sharer-User-Id", 1L))
-                .andExpect(status().isOk());
-
-        BookingInDto bookingOfSecondBooker = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusDays(5))
-                .end(LocalDateTime.now().plusDays(6))
-                .build();
-        postBooking(bookingOfSecondBooker, 3L);
-
-        mockMvc.perform(patch("/bookings/3?approved=true")
-                        .header("X-Sharer-User-Id", 1L))
-                .andExpect(status().isOk());
+        Mockito
+                .when(bookingService.getBookingsByOwnerId(1L, "ALL", 0, 10))
+                .thenReturn(bookings);
 
         mockMvc.perform(get("/bookings/owner?state=ALL")
                         .header("X-Sharer-User-Id", 1L))
@@ -610,32 +393,9 @@ class BookingControllerTest {
 
     @Test
     void getBookingsByNotOwnerStatusIsNotFound() throws Exception {
-        postUser(itemOwner);
-        postItem(itemDto, 1L);
-
-        UserDto booker = UserDto.builder()
-                .name("booker")
-                .email("booker@gmail.com")
-                .build();
-        postUser(booker);
-        UserDto notOwner = UserDto.builder()
-                .name("somebody")
-                .email("smbd@gmail.com")
-                .build();
-        postUser(notOwner);
-
-        BookingInDto firstBooking = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusHours(2))
-                .end(LocalDateTime.now().plusDays(1))
-                .build();
-        postBooking(firstBooking, 2L);
-        BookingInDto secondBooking = BookingInDto.builder()
-                .itemId(1L)
-                .start(LocalDateTime.now().plusDays(2))
-                .end(LocalDateTime.now().plusDays(3))
-                .build();
-        postBooking(secondBooking, 2L);
+        Mockito
+                .when(bookingService.getUserBookings(3L, "ALL", 0, 10))
+                .thenThrow(new UserNotFoundException("User with id=3 is not the owner of any thing"));
 
         mockMvc.perform(get("/bookings/owner?state=ALL")
                         .header("X-Sharer-User-Id", 3L))
@@ -643,28 +403,5 @@ class BookingControllerTest {
                 .andExpect(result -> assertTrue(result.getResolvedException() instanceof UserNotFoundException))
                 .andExpect(result -> assertEquals("User with id=3 is not the owner of any thing",
                         Objects.requireNonNull(result.getResolvedException()).getMessage()));
-    }
-
-    private void postUser(UserDto userDto) throws Exception {
-        mockMvc.perform(post("/users")
-                        .contentType("application/json")
-                        .content(mapper.writeValueAsString(userDto)))
-                .andExpect(status().isOk());
-    }
-
-    private void postItem(ItemDto itemDto, long userId) throws Exception {
-        mockMvc.perform(post("/items")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Sharer-User-Id", userId)
-                        .content(mapper.writeValueAsString(itemDto)))
-                .andExpect(status().isOk());
-    }
-
-    private void postBooking(BookingInDto bookingInDto, long userId) throws Exception {
-        mockMvc.perform(post("/bookings")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Sharer-User-Id", userId)
-                        .content(mapper.writeValueAsString(bookingInDto)))
-                .andExpect(status().isOk());
     }
 }
