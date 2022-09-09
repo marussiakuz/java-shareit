@@ -23,6 +23,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import ru.practicum.shareit.exception.ErrorHandler;
 import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.dto.ItemUpdatedDto;
 
 import javax.validation.ConstraintViolationException;
 import java.nio.charset.StandardCharsets;
@@ -42,6 +43,7 @@ class ItemControllerTest {
     private final ObjectMapper mapper = new ObjectMapper();
     private static ItemDto itemDto;
     private static CommentDto commentDto;
+    private static ItemUpdatedDto itemUpdatedDto;
     private static ResponseEntity<Object> responseIsOk;
 
     @BeforeAll
@@ -55,6 +57,12 @@ class ItemControllerTest {
         commentDto = CommentDto.builder()
                 .authorName("Nikki")
                 .text("like it")
+                .build();
+
+        itemUpdatedDto = ItemUpdatedDto.builder()
+                .name("Item")
+                .available(true)
+                .description("on python")
                 .build();
 
         responseIsOk = ResponseEntity
@@ -266,7 +274,7 @@ class ItemControllerTest {
     @Test
     void whenUpdateValidItemThenStatusIsOk() throws Exception {
         Mockito
-                .when(itemClient.update(1L, itemDto, 2L))
+                .when(itemClient.update(1L, itemUpdatedDto, 2L))
                 .thenReturn(responseIsOk);
 
         mockMvc.perform(patch("/items/2")
@@ -275,16 +283,16 @@ class ItemControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .header("X-Sharer-User-Id", 1L)
-                        .content(mapper.writeValueAsString(itemDto)))
+                        .content(mapper.writeValueAsString(itemUpdatedDto)))
                 .andExpect(status().isOk());
 
         Mockito.verify(itemClient, Mockito.times(1))
-                .update(1L, itemDto, 2L);
+                .update(1L, itemUpdatedDto, 2L);
     }
 
-    /*@Test
+    @Test
     void whenUpdateItemIfDescriptionIsNullThenStatusIsBadRequest() throws Exception {
-        ItemDto withoutDescription = ItemDto.builder()
+        ItemUpdatedDto withoutDescription = ItemUpdatedDto.builder()
                 .name("Item")
                 .available(true)
                 .build();
@@ -305,7 +313,7 @@ class ItemControllerTest {
 
     @Test
     void whenUpdateItemWithBlankDescriptionThenStatusIsBadRequest() throws Exception {
-        ItemDto withBlankDescription = ItemDto.builder()
+        ItemUpdatedDto withBlankDescription = ItemUpdatedDto.builder()
                 .name("Item")
                 .description("\t")
                 .available(true)
@@ -323,7 +331,7 @@ class ItemControllerTest {
 
         Mockito.verify(itemClient, Mockito.never())
                 .update(1L, withBlankDescription, 2L);
-    }*/
+    }
 
     @Test
     void whenUpdateItemIfNegativeItemIdThenStatusIsBadRequest() throws Exception {
@@ -333,12 +341,12 @@ class ItemControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .header("X-Sharer-User-Id", 1L)
-                        .content(mapper.writeValueAsString(itemDto)))
+                        .content(mapper.writeValueAsString(itemUpdatedDto)))
                 .andExpect(result -> assertTrue(result.getResolvedException() instanceof ConstraintViolationException))
                 .andExpect(status().isBadRequest());
 
         Mockito.verify(itemClient, Mockito.never())
-                .update(1L, itemDto, -2L);
+                .update(1L, itemUpdatedDto, -2L);
     }
 
     @Test

@@ -9,6 +9,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import ru.practicum.shareit.user.dto.UserDto;
+import ru.practicum.shareit.user.dto.UserUpdatedDto;
 
 import javax.validation.Valid;
 import javax.validation.constraints.Positive;
@@ -28,9 +29,10 @@ public class UserController {
     }
 
     @PatchMapping("/{userId}")
-    public ResponseEntity<Object> update(@PathVariable @Positive long userId, @RequestBody UserDto userDto) {
-        log.info("Updating user {}, userDto={}", userId, userDto);
-        return userClient.update(userId, userDto);
+    public ResponseEntity<Object> update(@PathVariable @Positive long userId,
+                                         @Valid @RequestBody UserUpdatedDto userUpdatedDto) {
+        log.info("Updating user {}, userDto={}", userId, userUpdatedDto);
+        return userClient.update(userId, userUpdatedDto);
     }
 
     @GetMapping("/{userId}")

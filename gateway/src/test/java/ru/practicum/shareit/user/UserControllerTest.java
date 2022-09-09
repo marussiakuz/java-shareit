@@ -21,6 +21,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import ru.practicum.shareit.exception.ErrorHandler;
 import ru.practicum.shareit.user.dto.UserDto;
+import ru.practicum.shareit.user.dto.UserUpdatedDto;
 
 import javax.validation.ConstraintViolationException;
 
@@ -41,6 +42,7 @@ class UserControllerTest {
     private MockMvc mockMvc;
     private final ObjectMapper mapper = new ObjectMapper();
     private static UserDto userDto;
+    private static UserUpdatedDto userUpdatedDto;
     private static ResponseEntity<Object> responseIsOk;
 
     @BeforeAll
@@ -48,6 +50,11 @@ class UserControllerTest {
         userDto = UserDto.builder()
                 .email("user@yandex.ru")
                 .name("userName")
+                .build();
+
+        userUpdatedDto = UserUpdatedDto.builder()
+                .email("new@gmail.com")
+                .name("updatedName")
                 .build();
     }
 
@@ -136,7 +143,7 @@ class UserControllerTest {
     @Test
     void whenUpdateValidUserThenStatusIsOk() throws Exception {
         Mockito
-                .when(userClient.update(1L, userDto))
+                .when(userClient.update(1L, userUpdatedDto))
                 .thenReturn(responseIsOk);
 
         mockMvc.perform(patch("/users/1")
@@ -144,16 +151,16 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .header("X-Sharer-User-Id", 1L)
-                        .content(mapper.writeValueAsString(userDto)))
+                        .content(mapper.writeValueAsString(userUpdatedDto)))
                 .andExpect(status().isOk());
 
         Mockito.verify(userClient, Mockito.times(1))
-                .update(1L, userDto);
+                .update(1L, userUpdatedDto);
     }
 
-    /*@Test
+    @Test
     void whenUpdateUserWithoutEmailThenStatusIsBadRequest() throws Exception {
-        UserDto withoutEmail = UserDto.builder()
+        UserUpdatedDto withoutEmail = UserUpdatedDto.builder()
                 .name("NewUser")
                 .build();
 
@@ -167,12 +174,12 @@ class UserControllerTest {
                 .andExpect(status().isBadRequest());
 
         Mockito.verify(userClient, Mockito.never())
-                .update(Mockito.anyLong(), Mockito.any(UserDto.class));
+                .update(Mockito.anyLong(), Mockito.any(UserUpdatedDto.class));
     }
 
     @Test
     void whenUpdateUserWithBlankEmailThenStatusIsBadRequest() throws Exception {
-        UserDto withBlankEmail = UserDto.builder()
+        UserUpdatedDto withBlankEmail = UserUpdatedDto.builder()
                 .name("NewUser")
                 .email("      ")
                 .build();
@@ -187,12 +194,12 @@ class UserControllerTest {
                 .andExpect(status().isBadRequest());
 
         Mockito.verify(userClient, Mockito.never())
-                .update(Mockito.anyLong(), Mockito.any(UserDto.class));
+                .update(Mockito.anyLong(), Mockito.any(UserUpdatedDto.class));
     }
 
     @Test
     void whenUpdateUserWithInvalidEmailThenStatusIsBadRequest() throws Exception {
-        UserDto withIncorrectEmail = UserDto.builder()
+        UserUpdatedDto withIncorrectEmail = UserUpdatedDto.builder()
                 .name("NewUser")
                 .email("99email.ru")
                 .build();
@@ -207,8 +214,8 @@ class UserControllerTest {
                 .andExpect(status().isBadRequest());
 
         Mockito.verify(userClient, Mockito.never())
-                .update(Mockito.anyLong(), Mockito.any(UserDto.class));
-    }*/
+                .update(Mockito.anyLong(), Mockito.any(UserUpdatedDto.class));
+    }
 
     @Test
     void whenUpdateUserIfNegativeUserIdThenStatusIsBadRequest() throws Exception {
@@ -221,7 +228,7 @@ class UserControllerTest {
                 .andExpect(status().isBadRequest());
 
         Mockito.verify(userClient, Mockito.never())
-                .update(Mockito.anyLong(), Mockito.any(UserDto.class));
+                .update(Mockito.anyLong(), Mockito.any(UserUpdatedDto.class));
     }
 
     @Test
