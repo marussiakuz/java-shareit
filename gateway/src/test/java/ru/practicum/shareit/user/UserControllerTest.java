@@ -21,7 +21,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import ru.practicum.shareit.exception.ErrorHandler;
 import ru.practicum.shareit.user.dto.UserDto;
-import ru.practicum.shareit.user.dto.UserUpdatedDto;
 
 import javax.validation.ConstraintViolationException;
 
@@ -42,7 +41,6 @@ class UserControllerTest {
     private MockMvc mockMvc;
     private final ObjectMapper mapper = new ObjectMapper();
     private static UserDto userDto;
-    private static UserUpdatedDto userUpdatedDto;
     private static ResponseEntity<Object> responseIsOk;
 
     @BeforeAll
@@ -50,11 +48,6 @@ class UserControllerTest {
         userDto = UserDto.builder()
                 .email("user@yandex.ru")
                 .name("userName")
-                .build();
-
-        userUpdatedDto = UserUpdatedDto.builder()
-                .email("new@gmail.com")
-                .name("updatedName")
                 .build();
     }
 
@@ -143,7 +136,7 @@ class UserControllerTest {
     @Test
     void whenUpdateValidUserThenStatusIsOk() throws Exception {
         Mockito
-                .when(userClient.update(1L, userUpdatedDto))
+                .when(userClient.update(1L, userDto))
                 .thenReturn(responseIsOk);
 
         mockMvc.perform(patch("/users/1")
@@ -151,70 +144,11 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .header("X-Sharer-User-Id", 1L)
-                        .content(mapper.writeValueAsString(userUpdatedDto)))
+                        .content(mapper.writeValueAsString(userDto)))
                 .andExpect(status().isOk());
 
         Mockito.verify(userClient, Mockito.times(1))
-                .update(1L, userUpdatedDto);
-    }
-
-    @Test
-    void whenUpdateUserWithoutEmailThenStatusIsBadRequest() throws Exception {
-        UserUpdatedDto withoutEmail = UserUpdatedDto.builder()
-                .name("NewUser")
-                .build();
-
-        mockMvc.perform(patch("/users/1")
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .header("X-Sharer-User-Id", 1L)
-                        .content(mapper.writeValueAsString(withoutEmail)))
-                .andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentNotValidException))
-                .andExpect(status().isBadRequest());
-
-        Mockito.verify(userClient, Mockito.never())
-                .update(Mockito.anyLong(), Mockito.any(UserUpdatedDto.class));
-    }
-
-    @Test
-    void whenUpdateUserWithBlankEmailThenStatusIsBadRequest() throws Exception {
-        UserUpdatedDto withBlankEmail = UserUpdatedDto.builder()
-                .name("NewUser")
-                .email("      ")
-                .build();
-
-        mockMvc.perform(patch("/users/1")
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .header("X-Sharer-User-Id", 1L)
-                        .content(mapper.writeValueAsString(withBlankEmail)))
-                .andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentNotValidException))
-                .andExpect(status().isBadRequest());
-
-        Mockito.verify(userClient, Mockito.never())
-                .update(Mockito.anyLong(), Mockito.any(UserUpdatedDto.class));
-    }
-
-    @Test
-    void whenUpdateUserWithInvalidEmailThenStatusIsBadRequest() throws Exception {
-        UserUpdatedDto withIncorrectEmail = UserUpdatedDto.builder()
-                .name("NewUser")
-                .email("99email.ru")
-                .build();
-
-        mockMvc.perform(patch("/users/1")
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .header("X-Sharer-User-Id", 1L)
-                        .content(mapper.writeValueAsString(withIncorrectEmail)))
-                .andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentNotValidException))
-                .andExpect(status().isBadRequest());
-
-        Mockito.verify(userClient, Mockito.never())
-                .update(Mockito.anyLong(), Mockito.any(UserUpdatedDto.class));
+                .update(1L, userDto);
     }
 
     @Test
@@ -228,7 +162,7 @@ class UserControllerTest {
                 .andExpect(status().isBadRequest());
 
         Mockito.verify(userClient, Mockito.never())
-                .update(Mockito.anyLong(), Mockito.any(UserUpdatedDto.class));
+                .update(Mockito.anyLong(), Mockito.any(UserDto.class));
     }
 
     @Test
