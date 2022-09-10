@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.springframework.data.domain.*;
 
+import ru.practicum.shareit.booking.enums.BookingState;
 import ru.practicum.shareit.booking.enums.Status;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.dto.BookingInDto;
@@ -47,7 +48,6 @@ class BookingServiceTest {
     private BookingInDto bookingInDto;
     private Item item;
     private User user;
-    private Request request;
 
     @BeforeEach
     void setUp() {
@@ -57,7 +57,7 @@ class BookingServiceTest {
                 .email("user@ya.ru")
                 .build();
 
-        request = Request.builder()
+        Request request = Request.builder()
                 .id(1L)
                 .user(user)
                 .description("wanted")
@@ -341,7 +341,7 @@ class BookingServiceTest {
 
         final UserNotFoundException exception = Assertions.assertThrows(
                 UserNotFoundException.class,
-                () -> bookingService.getUserBookings(1L, "ALL", 0, 10));
+                () -> bookingService.getUserBookings(1L, BookingState.ALL, 0, 10));
 
         Assertions.assertEquals("User with id=1 not found", exception.getMessage());
 
@@ -359,7 +359,7 @@ class BookingServiceTest {
         Mockito.when(bookingRepository.getAllByBookerId(1L, pageable))
                 .thenReturn(bookings);
 
-        bookingService.getUserBookings(1L, "ALL", 0, 10);
+        bookingService.getUserBookings(1L, BookingState.ALL, 0, 10);
 
         Mockito.verify(userRepository, Mockito.times(1))
                 .existsById(Mockito.anyLong());
@@ -388,7 +388,7 @@ class BookingServiceTest {
                 Mockito.any(Pageable.class)))
                 .thenReturn(bookings);
 
-        bookingService.getUserBookings(1L, "CURRENT", 0, 10);
+        bookingService.getUserBookings(1L, BookingState.CURRENT, 0, 10);
 
         Mockito.verify(userRepository, Mockito.times(1))
                 .existsById(Mockito.anyLong());
@@ -418,7 +418,7 @@ class BookingServiceTest {
                         Mockito.any(Pageable.class)))
                 .thenReturn(bookings);
 
-        bookingService.getUserBookings(1L, "FUTURE", 0, 10);
+        bookingService.getUserBookings(1L, BookingState.FUTURE, 0, 10);
 
         Mockito.verify(userRepository, Mockito.times(1))
                 .existsById(Mockito.anyLong());
@@ -448,7 +448,7 @@ class BookingServiceTest {
                         Mockito.any(Pageable.class)))
                 .thenReturn(bookings);
 
-        bookingService.getUserBookings(1L, "PAST", 0, 10);
+        bookingService.getUserBookings(1L, BookingState.PAST, 0, 10);
 
         Mockito.verify(userRepository, Mockito.times(1))
                 .existsById(Mockito.anyLong());
@@ -478,7 +478,7 @@ class BookingServiceTest {
         Mockito.when(bookingRepository.getAllByBookerIdAndStatus(1L, Status.WAITING, pageable))
                 .thenReturn(bookings);
 
-        bookingService.getUserBookings(1L, "WAITING", 0, 10);
+        bookingService.getUserBookings(1L, BookingState.WAITING, 0, 10);
 
         Mockito.verify(userRepository, Mockito.times(1))
                 .existsById(Mockito.anyLong());
@@ -508,7 +508,7 @@ class BookingServiceTest {
         Mockito.when(bookingRepository.getAllByBookerIdAndStatus(1L, Status.REJECTED, pageable))
                 .thenReturn(bookings);
 
-        bookingService.getUserBookings(1L, "REJECTED", 0, 10);
+        bookingService.getUserBookings(1L, BookingState.REJECTED, 0, 10);
 
         Mockito.verify(userRepository, Mockito.times(1))
                 .existsById(Mockito.anyLong());
@@ -535,7 +535,7 @@ class BookingServiceTest {
 
         final UserNotFoundException exception = Assertions.assertThrows(
                 UserNotFoundException.class,
-                () -> bookingService.getBookingsByOwnerId(3L, "ALL", 0, 10));
+                () -> bookingService.getBookingsByOwnerId(3L, BookingState.ALL, 0, 10));
 
         Assertions.assertEquals("User with id=3 is not the owner of any thing", exception.getMessage());
 
@@ -553,7 +553,7 @@ class BookingServiceTest {
         Mockito.when(bookingRepository.getAllByOwnerId(1L, pageable))
                 .thenReturn(bookings);
 
-        bookingService.getBookingsByOwnerId(1L, "ALL", 0, 10);
+        bookingService.getBookingsByOwnerId(1L, BookingState.ALL, 0, 10);
 
         Mockito.verify(itemRepository, Mockito.times(1))
                 .existsByOwnerId(Mockito.anyLong());
@@ -580,7 +580,7 @@ class BookingServiceTest {
                         Mockito.any(Pageable.class)))
                 .thenReturn(bookings);
 
-        bookingService.getBookingsByOwnerId(1L, "CURRENT", 0, 10);
+        bookingService.getBookingsByOwnerId(1L, BookingState.CURRENT, 0, 10);
 
         Mockito.verify(itemRepository, Mockito.times(1))
                 .existsByOwnerId(Mockito.anyLong());
@@ -607,7 +607,7 @@ class BookingServiceTest {
                         Mockito.any(Pageable.class)))
                 .thenReturn(bookings);
 
-        bookingService.getBookingsByOwnerId(1L, "FUTURE", 0, 10);
+        bookingService.getBookingsByOwnerId(1L, BookingState.FUTURE, 0, 10);
 
         Mockito.verify(itemRepository, Mockito.times(1))
                 .existsByOwnerId(Mockito.anyLong());
@@ -634,7 +634,7 @@ class BookingServiceTest {
                         Mockito.any(Pageable.class)))
                 .thenReturn(bookings);
 
-        bookingService.getBookingsByOwnerId(1L, "PAST", 0, 10);
+        bookingService.getBookingsByOwnerId(1L, BookingState.PAST, 0, 10);
 
         Mockito.verify(itemRepository, Mockito.times(1))
                 .existsByOwnerId(Mockito.anyLong());
@@ -661,7 +661,7 @@ class BookingServiceTest {
         Mockito.when(bookingRepository.getAllByOwnerIdAndStatus(1L, Status.WAITING, pageable))
                 .thenReturn(bookings);
 
-        bookingService.getBookingsByOwnerId(1L, "WAITING", 0, 10);
+        bookingService.getBookingsByOwnerId(1L, BookingState.WAITING, 0, 10);
 
         Mockito.verify(itemRepository, Mockito.times(1))
                 .existsByOwnerId(Mockito.anyLong());
@@ -688,7 +688,7 @@ class BookingServiceTest {
         Mockito.when(bookingRepository.getAllByOwnerIdAndStatus(1L, Status.REJECTED, pageable))
                 .thenReturn(bookings);
 
-        bookingService.getBookingsByOwnerId(1L, "REJECTED", 0, 10);
+        bookingService.getBookingsByOwnerId(1L, BookingState.REJECTED, 0, 10);
 
         Mockito.verify(itemRepository, Mockito.times(1))
                 .existsByOwnerId(Mockito.anyLong());

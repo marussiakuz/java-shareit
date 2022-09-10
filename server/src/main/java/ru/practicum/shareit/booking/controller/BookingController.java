@@ -2,6 +2,7 @@ package ru.practicum.shareit.booking.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.shareit.booking.enums.BookingState;
 import ru.practicum.shareit.booking.model.dto.BookingInDto;
 import ru.practicum.shareit.booking.model.dto.BookingOutDto;
 import ru.practicum.shareit.booking.service.BookingService;
@@ -37,7 +38,7 @@ public class BookingController {
 
     @GetMapping
     public List<BookingOutDto> getUserBookings(@RequestHeader("X-Sharer-User-Id") long userId,
-                                               @RequestParam(value = "state") String state,
+                                               @RequestParam(value = "state") BookingState state,
                                                @RequestParam(value = "from") int from,
                                                @RequestParam(value = "size") int size) {
         return bookingService.getUserBookings(userId, state, from, size);
@@ -45,7 +46,7 @@ public class BookingController {
 
     @GetMapping("/owner")
     public List<BookingOutDto> getBookingsByOwnerId(@RequestHeader("X-Sharer-User-Id") long userId,
-                                                    @RequestParam(value = "state") String state,
+                                                    @RequestParam(value = "state") BookingState state,
                                                     @RequestParam (value = "from") int from,
                                                     @RequestParam (value = "size") int size) {
         return bookingService.getBookingsByOwnerId(userId, state, from, size);

@@ -2,13 +2,10 @@ package ru.practicum.shareit.item;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.mockito.Mockito;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -19,7 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-
 import ru.practicum.shareit.exception.ErrorHandler;
 import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
@@ -29,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ItemController.class)
@@ -370,6 +367,16 @@ class ItemControllerTest {
 
         Mockito.verify(itemClient, Mockito.times(1))
                 .search("text", 0, 10);
+    }
+
+    @Test
+    void whenSearchIfBlankTextThenStatusIsOkAndReturnEmptyList() throws Exception {
+        mockMvc.perform(get("/items/search?text="))
+                .andExpect(jsonPath("$").doesNotExist())
+                .andExpect(status().isOk());
+
+        Mockito.verify(itemClient, Mockito.times(1))
+                .search("", 0, 10);
     }
 
     @Test

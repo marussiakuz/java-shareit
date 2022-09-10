@@ -4,11 +4,14 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+
 import org.springframework.data.domain.*;
+
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.dto.BookingShortDto;
 import ru.practicum.shareit.booking.model.mapper.BookingMapper;
@@ -470,16 +473,6 @@ class ItemServiceTest {
                 .getTopByItem_IdAndEndBeforeOrderByStartDesc(Mockito.anyLong(), Mockito.any(LocalDateTime.class));
         Mockito.verify(bookingRepository, Mockito.times(1))
                 .getTopByItem_IdAndStartAfterOrderByStartDesc(Mockito.anyLong(), Mockito.any(LocalDateTime.class));
-    }
-
-    @Test
-    void whenSearchTextIsBlankThenReturnEmptyList() {
-        List<ItemDto> emptyList = itemService.search(" ", 0, 10);
-
-        assertThat(emptyList.size(), equalTo(0));
-
-        Mockito.verify(itemRepository, Mockito.never())
-                .search(" ", PageRequest.of(0, 10));
     }
 
     @Test

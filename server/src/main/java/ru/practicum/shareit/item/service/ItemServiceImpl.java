@@ -11,7 +11,8 @@ import ru.practicum.shareit.booking.model.dto.BookingShortDto;
 import ru.practicum.shareit.booking.model.mapper.BookingMapper;
 import ru.practicum.shareit.booking.repo.BookingRepository;
 import ru.practicum.shareit.errorHandler.exceptions.*;
-import ru.practicum.shareit.item.model.*;
+import ru.practicum.shareit.item.model.Comment;
+import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.model.dto.CommentDto;
 import ru.practicum.shareit.item.model.dto.ItemDto;
 import ru.practicum.shareit.item.model.dto.ItemDtoFull;
@@ -27,7 +28,7 @@ import ru.practicum.shareit.user.repo.UserRepository;
 import ru.practicum.shareit.utils.Pagination;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -136,8 +137,6 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public List<ItemDto> search(String text, int from, int size) {  // поиск вещей по содержанию введенного текста в имени или описании
-        if (text.isEmpty() || text.isBlank()) return new ArrayList<>();
-
         Pageable pageable = Pagination.of(from, size);
 
         return itemRepository.search(text, pageable).get()

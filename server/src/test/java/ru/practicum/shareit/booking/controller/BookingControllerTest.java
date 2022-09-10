@@ -2,10 +2,13 @@ package ru.practicum.shareit.booking.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import org.mockito.Mockito;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -14,6 +17,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import ru.practicum.shareit.booking.enums.BookingState;
 import ru.practicum.shareit.booking.model.dto.BookingInDto;
 import ru.practicum.shareit.booking.model.dto.BookingOutDto;
 import ru.practicum.shareit.booking.service.BookingService;
@@ -33,6 +38,7 @@ import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -298,7 +304,7 @@ class BookingControllerTest {
         bookings.add(secondBooking);
 
         Mockito
-                .when(bookingService.getUserBookings(2L, "ALL", 0, 10))
+                .when(bookingService.getUserBookings(2L, BookingState.ALL, 0, 10))
                 .thenReturn(bookings);
 
         mockMvc.perform(get("/bookings?state=ALL&from=0&size=10")
@@ -318,7 +324,7 @@ class BookingControllerTest {
     @Test
     void getUserBookingsByNotExistsUserStatusIsNotFound() throws Exception {
         Mockito
-                .when(bookingService.getUserBookings(5L, "ALL", 0, 10))
+                .when(bookingService.getUserBookings(5L, BookingState.ALL, 0, 10))
                 .thenThrow(new UserNotFoundException("User with id=5 not found"));
 
         mockMvc.perform(get("/bookings?state=ALL&from=0&size=10")
@@ -352,7 +358,7 @@ class BookingControllerTest {
         List<BookingOutDto> bookings = new ArrayList<>(List.of(firstBooking, secondBooking, thirdBooking));
 
         Mockito
-                .when(bookingService.getBookingsByOwnerId(1L, "ALL", 0, 10))
+                .when(bookingService.getBookingsByOwnerId(1L, BookingState.ALL, 0, 10))
                 .thenReturn(bookings);
 
         mockMvc.perform(get("/bookings/owner?state=ALL&from=0&size=10")
@@ -376,7 +382,7 @@ class BookingControllerTest {
     @Test
     void getBookingsByNotOwnerStatusIsNotFound() throws Exception {
         Mockito
-                .when(bookingService.getBookingsByOwnerId(3L, "ALL", 0, 10))
+                .when(bookingService.getBookingsByOwnerId(3L, BookingState.ALL, 0, 10))
                 .thenThrow(new UserNotFoundException("User with id=3 is not the owner of any thing"));
 
         mockMvc.perform(get("/bookings/owner?state=ALL&from=0&size=10")

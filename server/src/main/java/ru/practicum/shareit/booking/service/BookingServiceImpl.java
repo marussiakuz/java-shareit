@@ -4,6 +4,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import ru.practicum.shareit.booking.enums.BookingState;
 import ru.practicum.shareit.booking.enums.Status;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.dto.BookingInDto;
@@ -84,7 +85,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public List<BookingOutDto> getUserBookings(long userId, String state, int from, int size) {
+    public List<BookingOutDto> getUserBookings(long userId, BookingState state, int from, int size) {
         if (!userRepository.existsById(userId))
             throw new UserNotFoundException(String.format("User with id=%s not found", userId));
 
@@ -96,7 +97,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public List<BookingOutDto> getBookingsByOwnerId(long ownerId, String state, int from, int size) {
+    public List<BookingOutDto> getBookingsByOwnerId(long ownerId, BookingState state, int from, int size) {
         if (!itemRepository.existsByOwnerId(ownerId))
             throw new UserNotFoundException(String.format("User with id=%s is not the owner of any thing", ownerId));
 
@@ -107,33 +108,33 @@ public class BookingServiceImpl implements BookingService {
                 .collect(Collectors.toList());
     }
 
-    private Slice<Booking> getFilteredBookingsByStateAndBookerId(long bookerId, Pageable pageable, String state) {
+    private Slice<Booking> getFilteredBookingsByStateAndBookerId(long bookerId, Pageable pageable, BookingState state) {
         switch (state) {
-            case "ALL":
+            case ALL:
                 return bookingRepository.getAllByBookerId(bookerId, pageable);
-            case "CURRENT":
+            case CURRENT:
                 return bookingRepository.getAllCurrentByBookerId(bookerId, LocalDateTime.now(), pageable);
-            case "FUTURE":
+            case FUTURE:
                 return bookingRepository.getAllByBookerIdAndStartAfter(bookerId, LocalDateTime.now(), pageable);
-            case "PAST":
+            case PAST:
                 return bookingRepository.getAllByBookerIdAndEndBefore(bookerId, LocalDateTime.now(), pageable);
             default:
-                return bookingRepository.getAllByBookerIdAndStatus(bookerId, Status.valueOf(state), pageable);
+                return bookingRepository.getAllByBookerIdAndStatus(bookerId, Status.valueOf(state.name()), pageable);
         }
     }
 
-    private Slice<Booking> getFilteredBookingsByStateAndOwnerId(long ownerId, Pageable pageable, String state) {
+    private Slice<Booking> getFilteredBookingsByStateAndOwnerId(long ownerId, Pageable pageable, BookingState state) {
         switch (state) {
-            case "ALL":
+            case ALL:
                 return bookingRepository.getAllByOwnerId(ownerId, pageable);
-            case "CURRENT":
+            case CURRENT:
                 return bookingRepository.getAllCurrentByOwnerId(ownerId, LocalDateTime.now(), pageable);
-            case "FUTURE":
+            case FUTURE:
                 return bookingRepository.getAllFutureByOwnerId(ownerId, LocalDateTime.now(), pageable);
-            case "PAST":
+            case PAST:
                 return bookingRepository.getAllPastByOwnerId(ownerId, LocalDateTime.now(), pageable);
             default:
-                return bookingRepository.getAllByOwnerIdAndStatus(ownerId, Status.valueOf(state), pageable);
+                return bookingRepository.getAllByOwnerIdAndStatus(ownerId, Status.valueOf(state.name()), pageable);
         }
     }
 }

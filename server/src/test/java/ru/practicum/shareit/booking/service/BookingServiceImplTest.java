@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
+import ru.practicum.shareit.booking.enums.BookingState;
 import ru.practicum.shareit.booking.enums.Status;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.dto.BookingInDto;
@@ -159,7 +160,8 @@ class BookingServiceImplTest {
         bookingService.addNewBooking(returnedAnotherBooker.getId(), anotherBooking);
         BookingOutDto second = bookingService.addNewBooking(booker.getId(), bookingOfBooker);
 
-        List<BookingOutDto> bookerBookings = bookingService.getUserBookings(booker.getId(), "ALL", 0, 10);
+        List<BookingOutDto> bookerBookings = bookingService.getUserBookings(booker.getId(), BookingState.ALL,
+                0, 10);
 
         assertThat(bookerBookings.size(), equalTo(2));
         assertThat(bookerBookings.get(0).getBooker(), equalTo(UserMapper.toUser(booker)));
@@ -196,7 +198,8 @@ class BookingServiceImplTest {
         BookingOutDto returnedCurrent = bookingService.addNewBooking(booker.getId(), currentDto);
 
         Thread.sleep(1000L);
-        List<BookingOutDto> bookerBookings = bookingService.getUserBookings(booker.getId(), "CURRENT", 0, 10);
+        List<BookingOutDto> bookerBookings = bookingService.getUserBookings(booker.getId(), BookingState.CURRENT,
+                0, 10);
 
         assertThat(bookerBookings.size(), equalTo(1));
         assertThat(bookerBookings.get(0).getBooker(), equalTo(UserMapper.toUser(booker)));
@@ -231,7 +234,8 @@ class BookingServiceImplTest {
         BookingOutDto returnedPast = bookingService.addNewBooking(booker.getId(), pastDto);
 
         Thread.sleep(2000L);
-        List<BookingOutDto> bookerBookings = bookingService.getUserBookings(booker.getId(), "PAST", 0, 10);
+        List<BookingOutDto> bookerBookings = bookingService.getUserBookings(booker.getId(), BookingState.PAST,
+                0, 10);
 
         assertThat(bookerBookings.size(), equalTo(1));
         assertThat(bookerBookings.get(0).getBooker(), equalTo(UserMapper.toUser(booker)));
@@ -265,7 +269,8 @@ class BookingServiceImplTest {
         bookingService.addNewBooking(returnedAnotherBooker.getId(), anotherBooking);
         BookingOutDto secondFuture = bookingService.addNewBooking(booker.getId(), anotherFutureBooking);
 
-        List<BookingOutDto> bookerBookings = bookingService.getUserBookings(booker.getId(), "FUTURE", 0, 10);
+        List<BookingOutDto> bookerBookings = bookingService.getUserBookings(booker.getId(), BookingState.FUTURE,
+                0, 10);
 
         assertThat(bookerBookings.size(), equalTo(2));
         assertThat(bookerBookings.get(0).getBooker(), equalTo(UserMapper.toUser(booker)));
@@ -297,12 +302,12 @@ class BookingServiceImplTest {
                 .start(LocalDateTime.now().plusDays(3))
                 .end(LocalDateTime.now().plusDays(4))
                 .build();
-        BookingOutDto first = bookingService.addNewBooking(booker.getId(), bookingInDto);
         bookingService.addNewBooking(returnedAnotherBooker.getId(), anotherBooking);
         BookingOutDto second = bookingService.addNewBooking(booker.getId(), bookingOfBooker);
         BookingOutDto updatedToRejected = bookingService.updateStatus(itemOwner.getId(), second.getId(), false);
 
-        List<BookingOutDto> bookerBookings = bookingService.getUserBookings(booker.getId(), "REJECTED", 0, 10);
+        List<BookingOutDto> bookerBookings = bookingService.getUserBookings(booker.getId(), BookingState.REJECTED,
+                0, 10);
 
         assertThat(bookerBookings.size(), equalTo(1));
         assertThat(bookerBookings.get(0).getBooker(), equalTo(UserMapper.toUser(booker)));
@@ -338,7 +343,8 @@ class BookingServiceImplTest {
         BookingOutDto second = bookingService.addNewBooking(booker.getId(), bookingOfBooker);
         bookingService.updateStatus(itemOwner.getId(), second.getId(), true);
 
-        List<BookingOutDto> bookerBookings = bookingService.getUserBookings(booker.getId(), "WAITING", 0, 10);
+        List<BookingOutDto> bookerBookings = bookingService.getUserBookings(booker.getId(), BookingState.WAITING,
+                0, 10);
 
         assertThat(bookerBookings.size(), equalTo(1));
         assertThat(bookerBookings.get(0).getBooker(), equalTo(UserMapper.toUser(booker)));
@@ -373,7 +379,8 @@ class BookingServiceImplTest {
         BookingOutDto second = bookingService.addNewBooking(returnedAnotherBooker.getId(), anotherBooking);
         BookingOutDto third = bookingService.addNewBooking(booker.getId(), bookingOfBooker);
 
-        List<BookingOutDto> bookerBookings = bookingService.getBookingsByOwnerId(itemOwner.getId(), "ALL", 0, 10);
+        List<BookingOutDto> bookerBookings = bookingService.getBookingsByOwnerId(itemOwner.getId(), BookingState.ALL,
+                0, 10);
 
         assertThat(bookerBookings.size(), equalTo(3));
         assertThat(bookerBookings.get(0).getItem().getOwner(), equalTo(UserMapper.toUser(itemOwner)));
@@ -412,7 +419,8 @@ class BookingServiceImplTest {
         BookingOutDto returnedCurrent = bookingService.addNewBooking(booker.getId(), currentDto);
 
         Thread.sleep(1000L);
-        List<BookingOutDto> bookerBookings = bookingService.getBookingsByOwnerId(itemOwner.getId(), "CURRENT", 0, 10);
+        List<BookingOutDto> bookerBookings = bookingService.getBookingsByOwnerId(itemOwner.getId(), BookingState.CURRENT,
+                0, 10);
 
         assertThat(bookerBookings.size(), equalTo(1));
         assertThat(bookerBookings.get(0).getItem().getOwner(), equalTo(UserMapper.toUser(itemOwner)));
@@ -447,7 +455,8 @@ class BookingServiceImplTest {
         BookingOutDto returnedPast = bookingService.addNewBooking(booker.getId(), pastDto);
 
         Thread.sleep(2000L);
-        List<BookingOutDto> bookerBookings = bookingService.getBookingsByOwnerId(itemOwner.getId(), "PAST", 0, 10);
+        List<BookingOutDto> bookerBookings = bookingService.getBookingsByOwnerId(itemOwner.getId(), BookingState.PAST,
+                0, 10);
 
         assertThat(bookerBookings.size(), equalTo(1));
         assertThat(bookerBookings.get(0).getItem().getOwner(), equalTo(UserMapper.toUser(itemOwner)));
@@ -481,7 +490,8 @@ class BookingServiceImplTest {
         BookingOutDto secondFuture = bookingService.addNewBooking(returnedAnotherBooker.getId(), anotherBooking);
         BookingOutDto thirdFuture = bookingService.addNewBooking(booker.getId(), anotherFutureBooking);
 
-        List<BookingOutDto> bookerBookings = bookingService.getBookingsByOwnerId(itemOwner.getId(), "FUTURE", 0, 10);
+        List<BookingOutDto> bookerBookings = bookingService.getBookingsByOwnerId(itemOwner.getId(), BookingState.FUTURE,
+                0, 10);
 
         assertThat(bookerBookings.size(), equalTo(3));
         assertThat(bookerBookings.get(0).getItem().getOwner(), equalTo(UserMapper.toUser(itemOwner)));
@@ -520,7 +530,8 @@ class BookingServiceImplTest {
         BookingOutDto second = bookingService.addNewBooking(booker.getId(), bookingOfBooker);
         BookingOutDto updatedToRejected = bookingService.updateStatus(itemOwner.getId(), second.getId(), false);
 
-        List<BookingOutDto> bookerBookings = bookingService.getBookingsByOwnerId(itemOwner.getId(), "REJECTED", 0, 10);
+        List<BookingOutDto> bookerBookings = bookingService.getBookingsByOwnerId(itemOwner.getId(), BookingState.REJECTED,
+                0, 10);
 
         assertThat(bookerBookings.size(), equalTo(1));
         assertThat(bookerBookings.get(0).getItem().getOwner(), equalTo(UserMapper.toUser(itemOwner)));
@@ -557,7 +568,8 @@ class BookingServiceImplTest {
         bookingService.updateStatus(itemOwner.getId(), first.getId(), true);
         bookingService.updateStatus(itemOwner.getId(), third.getId(), true);
 
-        List<BookingOutDto> bookerBookings = bookingService.getBookingsByOwnerId(itemOwner.getId(), "WAITING", 0, 10);
+        List<BookingOutDto> bookerBookings = bookingService.getBookingsByOwnerId(itemOwner.getId(), BookingState.WAITING,
+                0, 10);
 
         assertThat(bookerBookings.size(), equalTo(1));
         assertThat(bookerBookings.get(0).getItem().getOwner(), equalTo(UserMapper.toUser(itemOwner)));
