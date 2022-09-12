@@ -1,8 +1,10 @@
 package ru.practicum.shareit.user.service;
 
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import ru.practicum.shareit.errorHandler.exceptions.DuplicateUserException;
 import ru.practicum.shareit.errorHandler.exceptions.UserNotFoundException;
 import ru.practicum.shareit.user.model.User;

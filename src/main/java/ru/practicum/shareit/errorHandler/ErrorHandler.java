@@ -1,12 +1,14 @@
 package ru.practicum.shareit.errorHandler;
 
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
 import ru.practicum.shareit.errorHandler.exceptions.*;
 
 import java.util.HashMap;
@@ -23,7 +25,7 @@ public class ErrorHandler {
     }
 
     @ExceptionHandler({UserNotFoundException.class, ItemNotFoundException.class, BookingNotFoundException.class,
-            HttpMediaTypeNotAcceptableException.class})
+            RequestNotFoundException.class, HttpMediaTypeNotAcceptableException.class})
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ErrorResponse handleNotFoundException(final RuntimeException e) {
         return new ErrorResponse(e.getMessage());
@@ -32,6 +34,12 @@ public class ErrorHandler {
     @ExceptionHandler(NoAccessRightsException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ErrorResponse handleNoAccessRightsException(final RuntimeException e) {
+        return new ErrorResponse(e.getMessage());
+    }
+
+    @ExceptionHandler(IllegalPaginationArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleIllegalPaginationArgumentException(final IllegalPaginationArgumentException e) {
         return new ErrorResponse(e.getMessage());
     }
 

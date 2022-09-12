@@ -1,6 +1,8 @@
 package ru.practicum.shareit.booking.service;
 
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+
 import ru.practicum.shareit.booking.enums.State;
 import ru.practicum.shareit.booking.enums.Status;
 import ru.practicum.shareit.booking.model.Booking;
@@ -13,8 +15,10 @@ import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repo.ItemRepository;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repo.UserRepository;
+import ru.practicum.shareit.utils.Pagination;
 
 import java.time.LocalDateTime;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -22,7 +26,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class BookingServiceImpl implements BookingService {
-
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
@@ -81,45 +84,58 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public List<BookingOutDto> getUserBookings(long userId, String state) {
+    public List<BookingOutDto> getUserBookings(long userId, String state, int from, int size) {
         checkValidState(state);
-
         if (!userRepository.existsById(userId))
             throw new UserNotFoundException(String.format("User with id=%s not found", userId));
 
-        return getFilteredBookingsByState(bookingRepository.getBookingsByBookerIdOrderByStartDesc(userId),
-                State.valueOf(state));
+        Pageable sortedByStartDesc = Pagination.of(from, size, Sort.by("start").descending());
+
+        return getFilteredBookingsByStateAndBookerId(userId, sortedByStartDesc, state).get()
+                .map(BookingMapper::toBookingDto)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public List<BookingOutDto> getBookingsByOwnerId(long ownerId, String state) {
+    public List<BookingOutDto> getBookingsByOwnerId(long ownerId, String state, int from, int size) {
         checkValidState(state);
-
         if (!itemRepository.existsByOwnerId(ownerId))
             throw new UserNotFoundException(String.format("User with id=%s is not the owner of any thing", ownerId));
 
-        return getFilteredBookingsByState(bookingRepository.getBookingsByOwnerId(ownerId), State.valueOf(state));
-    }
+        Pageable sortedByStartDesc = Pagination.of(from, size, Sort.by("start").descending());
 
-    private List<BookingOutDto> getFilteredBookingsByState(List<Booking> bookings, State state) {
-        List<BookingOutDto> bookingsDto = bookings.stream()
+        return getFilteredBookingsByStateAndOwnerId(ownerId, sortedByStartDesc, State.valueOf(state)).get()
                 .map(BookingMapper::toBookingDto)
                 .collect(Collectors.toList());
-
-        if (state == State.ALL) return bookingsDto;
-
-        return bookingsDto.stream()
-                .filter(bookingOutDto -> filterByState(bookingOutDto, state))
-                .collect(Collectors.toList());
     }
 
-    private boolean filterByState(BookingOutDto bookingOutDto, State state) {
+    private Slice<Booking> getFilteredBookingsByStateAndBookerId(long bookerId, Pageable pageable, String state) {
+        switch (state) {
+            case "ALL":
+                return bookingRepository.getAllByBookerId(bookerId, pageable);
+            case "CURRENT":
+                return bookingRepository.getAllCurrentByBookerId(bookerId, LocalDateTime.now(), pageable);
+            case "FUTURE":
+                return bookingRepository.getAllByBookerIdAndStartAfter(bookerId, LocalDateTime.now(), pageable);
+            case "PAST":
+                return bookingRepository.getAllByBookerIdAndEndBefore(bookerId, LocalDateTime.now(), pageable);
+            default:
+                return bookingRepository.getAllByBookerIdAndStatus(bookerId, Status.valueOf(state), pageable);
+        }
+    }
+
+    private Slice<Booking> getFilteredBookingsByStateAndOwnerId(long ownerId, Pageable pageable, State state) {
         switch (state.getState()) {
-            case "CURRENT": return bookingOutDto.getStart().isBefore(LocalDateTime.now())
-                    && bookingOutDto.getEnd().isAfter(LocalDateTime.now());
-            case "FUTURE": return bookingOutDto.getStart().isAfter(LocalDateTime.now());
-            case "PAST": return bookingOutDto.getEnd().isBefore(LocalDateTime.now());
-            default: return Objects.equals(bookingOutDto.getStatus(), state.getState());
+            case "ALL":
+                return bookingRepository.getAllByOwnerId(ownerId, pageable);
+            case "CURRENT":
+                return bookingRepository.getAllCurrentByOwnerId(ownerId, LocalDateTime.now(), pageable);
+            case "FUTURE":
+                return bookingRepository.getAllFutureByOwnerId(ownerId, LocalDateTime.now(), pageable);
+            case "PAST":
+                return bookingRepository.getAllPastByOwnerId(ownerId, LocalDateTime.now(), pageable);
+            default:
+                return bookingRepository.getAllByOwnerIdAndStatus(ownerId, Status.valueOf(state.getState()), pageable);
         }
     }
 

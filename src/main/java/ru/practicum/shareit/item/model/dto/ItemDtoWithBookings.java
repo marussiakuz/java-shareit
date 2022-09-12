@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import ru.practicum.shareit.booking.model.dto.BookingShortDto;
 
 import javax.validation.constraints.NotBlank;

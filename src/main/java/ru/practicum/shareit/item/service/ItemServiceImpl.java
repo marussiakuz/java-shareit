@@ -1,15 +1,15 @@
 package ru.practicum.shareit.item.service;
 
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.dto.BookingShortDto;
 import ru.practicum.shareit.booking.model.mapper.BookingMapper;
 import ru.practicum.shareit.booking.repo.BookingRepository;
-import ru.practicum.shareit.errorHandler.exceptions.InvalidRequestException;
-import ru.practicum.shareit.errorHandler.exceptions.ItemNotFoundException;
-import ru.practicum.shareit.errorHandler.exceptions.NoAccessRightsException;
-import ru.practicum.shareit.errorHandler.exceptions.UserNotFoundException;
+import ru.practicum.shareit.errorHandler.exceptions.*;
 import ru.practicum.shareit.item.model.*;
 import ru.practicum.shareit.item.model.dto.CommentDto;
 import ru.practicum.shareit.item.model.dto.ItemDto;
@@ -19,8 +19,11 @@ import ru.practicum.shareit.item.model.mapper.CommentMapper;
 import ru.practicum.shareit.item.model.mapper.ItemMapper;
 import ru.practicum.shareit.item.repo.CommentRepository;
 import ru.practicum.shareit.item.repo.ItemRepository;
+import ru.practicum.shareit.request.model.Request;
+import ru.practicum.shareit.request.repo.RequestRepository;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repo.UserRepository;
+import ru.practicum.shareit.utils.Pagination;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -35,21 +38,29 @@ public class ItemServiceImpl implements ItemService {
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
     private final CommentRepository commentRepository;
+    private final RequestRepository requestRepository;
 
     public ItemServiceImpl(ItemRepository itemRepository, UserRepository userRepository,
-                           BookingRepository bookingRepository, CommentRepository commentRepository) {
+                           BookingRepository bookingRepository, CommentRepository commentRepository,
+                           RequestRepository requestRepository) {
         this.itemRepository = itemRepository;
         this.userRepository = userRepository;
         this.bookingRepository = bookingRepository;
         this.commentRepository = commentRepository;
+        this.requestRepository = requestRepository;
     }
 
     @Override
     public ItemDto addNewItem(long userId, ItemDto itemDto) {
-        checkUser(userId);
-
         Item item = ItemMapper.toItem(itemDto, userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(String.format("User with id=%s not found", userId))));
+
+        if (itemDto.getRequestId() != null) {
+            Request request = requestRepository.findById(itemDto.getRequestId())
+                    .orElseThrow(() -> new RequestNotFoundException(String.format("Request with id=%s not found",
+                            itemDto.getRequestId())));
+            item.setRequest(request);
+        }
 
         itemRepository.save(item);
         log.info("Item with id={} has successfully added by user with id={}", item.getId(), userId);
@@ -60,7 +71,6 @@ public class ItemServiceImpl implements ItemService {
     @Override
     public CommentDto postComment(CommentDto commentDto, long userId, long itemId) {
         checkComment(commentDto);
-
         User author = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(String.format("User with id=%s not found", userId)));
         Item item = itemRepository.findById(itemId)
@@ -68,8 +78,8 @@ public class ItemServiceImpl implements ItemService {
         Optional<Booking> bookingOptional = bookingRepository.getTopByItem_IdAndBooker_IdOrderByEndAsc(itemId, userId);
 
         if (bookingOptional.isEmpty() || bookingOptional.get().getEnd().isAfter(LocalDateTime.now()))
-            throw new InvalidRequestException(String.format("the user with id=%s cannot leave a comment on the item " +
-                    "with id=%s ", userId, itemId));
+            throw new InvalidRequestException(String.format("The user with id=%s cannot leave a comment on the item " +
+                    "with id=%s", userId, itemId));
 
         commentDto.setCreated(LocalDateTime.now());
         Comment comment = commentRepository.save(CommentMapper.toComment(commentDto, item, author));
@@ -115,17 +125,22 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-    public List<ItemDtoWithBookings> getItemsByOwnerId(long userId) {
-        return itemRepository.findItemsByOwnerId(userId).stream()
-                .map(item -> getItemWithBookings(item.getId()))
+    public List<ItemDtoWithBookings> getItemsByOwnerId(long userId, int from, int size) {
+        Pageable pageable = Pagination.of(from, size);
+
+        return itemRepository.findItemsByOwnerId(userId, pageable).get()
+                .map(item -> ItemMapper.toItemDtoWithBookings(item, getLastBooking(item.getId()),
+                        getNextBooking(item.getId())))
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<ItemDto> search(String text) {  // поиск вещей по содержанию введенного текста в имени или описании
+    public List<ItemDto> search(String text, int from, int size) {  // поиск вещей по содержанию введенного текста в имени или описании
         if (text.isEmpty() || text.isBlank()) return new ArrayList<>();
 
-        return itemRepository.search(text).stream()
+        Pageable pageable = Pagination.of(from, size);
+
+        return itemRepository.search(text, pageable).get()
                 .map(ItemMapper::toItemDto)
                 .collect(Collectors.toList());
     }
@@ -133,13 +148,6 @@ public class ItemServiceImpl implements ItemService {
     private void checkUser(long userId) {  // проверка есть ли такой пользователь в базе
         if (!userRepository.existsById(userId))
             throw new UserNotFoundException(String.format("User with id=%s not found", userId));
-    }
-
-    private ItemDtoWithBookings getItemWithBookings(long itemId) {
-        Item item = itemRepository.findById(itemId)
-                .orElseThrow(() -> new ItemNotFoundException(String.format("Item with id=%s not found", itemId)));
-
-        return ItemMapper.toItemDtoWithBookings(item, getLastBooking(itemId), getNextBooking(itemId));
     }
 
     private void checkComment(CommentDto commentDto) {

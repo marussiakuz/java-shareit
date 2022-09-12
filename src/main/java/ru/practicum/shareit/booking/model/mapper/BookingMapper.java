@@ -5,6 +5,7 @@ import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.dto.BookingInDto;
 import ru.practicum.shareit.booking.model.dto.BookingOutDto;
 import ru.practicum.shareit.booking.model.dto.BookingShortDto;
+
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.user.model.User;
 
