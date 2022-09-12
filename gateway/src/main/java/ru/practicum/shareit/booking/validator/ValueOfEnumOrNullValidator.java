@@ -9,6 +9,7 @@ import java.util.stream.Stream;
 
 public class ValueOfEnumOrNullValidator implements ConstraintValidator<ValueOfEnum, CharSequence> {
     private List<String> acceptedValues;
+    boolean isNullEnabled;
 
     @Override
     public void initialize(ValueOfEnum annotation) {
@@ -16,15 +17,16 @@ public class ValueOfEnumOrNullValidator implements ConstraintValidator<ValueOfEn
                 .map(Enum::name)
                 .collect(Collectors.toList());
 
-        if (annotation.isNullEnabled()) acceptedValues.add(null);
+        if (annotation.isNullEnabled()) isNullEnabled = true;
     }
 
     @Override
     public boolean isValid(CharSequence value, ConstraintValidatorContext context) {
-        if (value == null) {
+        if (value == null && isNullEnabled) {
             return true;
         }
 
-        return acceptedValues.contains(value.toString());
+        assert value != null;
+        return acceptedValues.contains(value.toString().toUpperCase());
     }
 }
